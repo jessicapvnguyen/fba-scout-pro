@@ -1,0 +1,3009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FBA Scout Pro — Amazon Product Research</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase v10 compat SDK (no npm needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#060b16;--bg1:#0c1220;--bg2:#111827;--bg3:#162030;
+  --border:#1e2d45;--border2:#253650;
+  --acc:#6366f1;--acc2:#818cf8;--accglow:rgba(99,102,241,.15);
+  --green:#10b981;--yellow:#f59e0b;--red:#ef4444;
+  --t1:#e2e8f0;--t2:#94a3b8;--t3:#64748b;
+  --g1:linear-gradient(135deg,#6366f1,#8b5cf6);
+  --g2:linear-gradient(135deg,#06b6d4,#6366f1);
+}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg0);color:var(--t1);min-height:100vh;line-height:1.6}
+
+/* HEADER */
+.hdr{background:rgba(12,18,32,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;position:sticky;top:0;z-index:100}
+.hdr-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;gap:20px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.logo-icon{width:36px;height:36px;background:var(--g1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-txt{font-size:20px;font-weight:800;background:var(--g1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.apirow{display:flex;align-items:center;gap:8px;flex:1;max-width:420px}
+.apirow label{font-size:12px;color:var(--t3);white-space:nowrap;font-weight:500}
+.apiinput{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--t1);font-size:12px;font-family:monospace;outline:none;transition:border-color .2s}
+.apiinput:focus{border-color:var(--acc)}
+.apiinput::placeholder{color:var(--t3)}
+
+/* HERO */
+.hero{text-align:center;padding:52px 24px 44px;max-width:1400px;margin:0 auto}
+.badge{display:inline-flex;align-items:center;gap:6px;background:var(--accglow);border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:4px 14px;font-size:12px;color:var(--acc2);margin-bottom:20px;font-weight:500}
+.hero h1{font-size:52px;font-weight:900;line-height:1.08;margin-bottom:14px}
+.hero h1 .hl{background:var(--g1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:17px;color:var(--t2);margin-bottom:34px;max-width:580px;margin-left:auto;margin-right:auto}
+.searchrow{display:flex;gap:10px;max-width:720px;margin:0 auto}
+.srch-in{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:15px 20px;color:var(--t1);font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s,box-shadow .2s}
+.srch-in:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--accglow)}
+.srch-in::placeholder{color:var(--t3)}
+.srch-btn{background:var(--g1);color:#fff;border:none;border-radius:12px;padding:15px 28px;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:opacity .2s,transform .1s;white-space:nowrap}
+.srch-btn:hover{opacity:.88}
+.srch-btn:active{transform:scale(.97)}
+.srch-btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* LOADING */
+.loading{display:none;text-align:center;padding:80px 0}
+.loading.on{display:block}
+.spin{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{color:var(--t2);font-size:15px;font-weight:500}
+.load-step{margin-top:8px;font-size:13px;color:var(--t3)}
+
+/* ERROR */
+.errbox{display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:12px;padding:16px 20px;color:#fca5a5;margin:0 24px 20px;max-width:1400px;margin-left:auto;margin-right:auto}
+.errbox.on{display:block}
+
+/* RESULTS */
+.results{display:none;max-width:1400px;margin:0 auto;padding:0 24px 40px}
+.results.on{display:block}
+
+/* SCORE OVERVIEW */
+.overview{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 32px;margin-bottom:20px}
+.ov-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:14px}
+.prod-name{font-size:24px;font-weight:700;margin-bottom:4px;line-height:1.2}
+.prod-meta{color:var(--t2);font-size:13px}
+.rec-badge{padding:9px 18px;border-radius:10px;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+.rec-go{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.35)}
+.rec-caution{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.35)}
+.rec-avoid{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.35)}
+.scores-row{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+@media(max-width:900px){.scores-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.scores-row{grid-template-columns:repeat(2,1fr)}}
+.sc-card{text-align:center}
+.sc-ring{width:88px;height:88px;margin:0 auto 10px;position:relative}
+.sc-ring svg{transform:rotate(-90deg);width:88px;height:88px}
+.sc-ring circle{fill:none;stroke-width:6}
+.sc-track{stroke:var(--border)}
+.sc-fill{stroke-dasharray:220;stroke-dashoffset:220;stroke-linecap:round;transition:stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)}
+.sc-val{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:19px;font-weight:800}
+.sc-lbl{font-size:12px;color:var(--t3);font-weight:500}
+
+/* TABS */
+.tabs{display:flex;gap:3px;margin-bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:4px}
+.tab-btn{flex:1;background:transparent;border:none;padding:9px 14px;color:var(--t3);font-size:13px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;border-radius:8px;transition:all .18s;white-space:nowrap}
+.tab-btn.on{background:var(--g1);color:#fff}
+.tab-btn:hover:not(.on){color:var(--t1);background:var(--border)}
+.tab-pane{display:none}
+.tab-pane.on{display:block}
+
+/* SECTION HDR */
+.sec-hdr{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.sec-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.si-purple{background:rgba(99,102,241,.2)}
+.si-blue{background:rgba(6,182,212,.2)}
+.si-green{background:rgba(16,185,129,.2)}
+.si-orange{background:rgba(245,158,11,.2)}
+.sec-hdr h2{font-size:20px;font-weight:700}
+.sec-hdr p{font-size:13px;color:var(--t3);margin-top:2px}
+
+/* GRID */
+.g3{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px;margin-bottom:14px}
+.g1c{margin-bottom:14px}
+
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.card-t{font-size:12px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+
+/* DATA ROW */
+.dr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.dr:last-child{border-bottom:none}
+.dl{font-size:12px;color:var(--t2)}
+.dv{font-size:13px;font-weight:600;color:var(--t1);text-align:right;max-width:55%}
+.vg{color:var(--green)}.vy{color:var(--yellow)}.vr{color:var(--red)}.va{color:var(--acc2)}
+
+/* TAGS */
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.tag{background:var(--bg1);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--t2)}
+.tg{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:#34d399}
+.ta{background:var(--accglow);border-color:rgba(99,102,241,.3);color:var(--acc2)}
+.ty{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25);color:#fcd34d}
+.tr{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25);color:#fca5a5}
+
+/* LISTS */
+.ilist{list-style:none}
+.ilist li{display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:13px;color:var(--t2);border-bottom:1px solid var(--border)}
+.ilist li:last-child{border-bottom:none}
+.ilist li::before{content:"→";color:var(--acc);flex-shrink:0;margin-top:1px}
+.ilist.chk li::before{content:"✓";color:var(--green)}
+.ilist.warn li::before{content:"⚠";color:var(--yellow)}
+.ilist.bad li::before{content:"✗";color:var(--red)}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;font-weight:600;color:var(--t3);text-align:left;padding:7px 12px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.4px}
+.tbl td{font-size:12px;color:var(--t2);padding:9px 12px;border-bottom:1px solid var(--border)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--bg3)}
+
+/* SHIPPING CARDS */
+.ship-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}
+@media(max-width:700px){.ship-grid{grid-template-columns:1fr}}
+.ship-card{background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:14px}
+.ship-title{font-weight:600;font-size:13px;margin-bottom:10px}
+.ship-card.rec{border-color:rgba(99,102,241,.4);background:var(--accglow)}
+
+/* CHECKLIST */
+.chkitem{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.chkitem:last-child{border-bottom:none}
+.chkbox{width:20px;height:20px;border:2px solid var(--border2);border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s;color:transparent}
+.chkbox.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.chktxt{font-size:13px;color:var(--t2)}
+
+/* CALCULATOR */
+.calc-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px}
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+@media(max-width:768px){.calc-grid{grid-template-columns:1fr}}
+.calc-lbl{font-size:12px;color:var(--t2);margin-bottom:5px;display:block;font-weight:500}
+.calc-in{width:100%;background:var(--bg1);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--t1);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;margin-bottom:12px}
+.calc-in:focus{border-color:var(--acc)}
+.calc-res{background:var(--bg1);border-radius:12px;padding:18px}
+.cres-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.cres-row:last-child{border-bottom:none}
+.cres-row.tot{font-weight:700;font-size:14px;color:var(--t1)}
+.cres-row.profit-r{font-weight:800;font-size:17px;margin-top:4px}
+.verdict-box{margin-top:16px;padding:14px;border-radius:10px;font-size:14px;font-weight:600;text-align:center;display:none}
+.ai-hint{margin-top:14px;padding:14px;background:var(--bg1);border-radius:10px}
+.ai-hint-t{font-size:11px;font-weight:600;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.ai-hint-v{font-size:12px;color:var(--t2);line-height:1.8}
+.fill-btn{margin-top:10px;background:var(--accglow);border:1px solid rgba(99,102,241,.3);color:var(--acc2);padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500}
+
+/* SUMMARY */
+.summ-hero{background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.25);border-radius:16px;padding:28px 32px;margin-bottom:16px;text-align:center}
+.summ-hero h3{font-size:20px;font-weight:700;margin-bottom:10px}
+.summ-hero p{color:var(--t2);font-size:15px;line-height:1.7}
+.template-box{background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:18px;font-family:monospace;font-size:12px;color:var(--t2);white-space:pre-wrap;line-height:1.65}
+
+/* ── DUAL-MARKET LAYOUT ─────────────────────────────────── */
+.market-split{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:900px){.market-split{grid-template-columns:1fr}}
+.market-badge{font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.us-badge{background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);color:var(--acc2)}
+.au-badge{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#34d399}
+.market-score-box{margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+.msc-label{font-size:12px;color:var(--t3);font-weight:600}
+.msc-val{font-size:26px;font-weight:900;background:var(--g1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.msc-max{font-size:13px;color:var(--t3);font-weight:600}
+.market-rec-box{background:linear-gradient(135deg,rgba(99,102,241,.07),rgba(16,185,129,.04));border-color:rgba(99,102,241,.2)!important}
+.market-rec-row{display:flex;gap:24px;margin-bottom:10px;flex-wrap:wrap}
+.mri-label{font-size:11px;color:var(--t3);text-transform:uppercase;font-weight:600;letter-spacing:.4px;margin-bottom:3px}
+.mri-val{font-size:15px;font-weight:700;color:var(--t1)}
+/* ── DUAL-MARKET CALCULATOR ─────────────────────────────── */
+.calc-mkt-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+@media(max-width:700px){.calc-mkt-grid{grid-template-columns:1fr}}
+.calc-mkt-col{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.calc-mkt-hdr{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+
+/* ── INVESTMENT ESTIMATE ─────────────────────────────────── */
+.inv-scenario-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:14px 0}
+@media(max-width:800px){.inv-scenario-grid{grid-template-columns:1fr}}
+.inv-scenario{border-radius:12px;padding:18px 20px;border:1px solid var(--border);position:relative}
+.inv-scen-min{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.25)}
+.inv-scen-rec{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.35)}
+.inv-scen-ideal{background:rgba(99,102,241,.07);border-color:rgba(99,102,241,.25)}
+.inv-scen-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.inv-scen-min .inv-scen-badge{color:#fca5a5}
+.inv-scen-rec .inv-scen-badge{color:#34d399}
+.inv-scen-ideal .inv-scen-badge{color:var(--acc2)}
+.inv-scen-amount{font-size:28px;font-weight:900;margin-bottom:4px}
+.inv-scen-min .inv-scen-amount{color:#fca5a5}
+.inv-scen-rec .inv-scen-amount{color:#34d399}
+.inv-scen-ideal .inv-scen-amount{color:var(--acc2)}
+.inv-scen-details{font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.6}
+.inv-rec-star{position:absolute;top:-9px;right:14px;background:#34d399;color:#000;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.4px}
+.inv-sum-box{background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(99,102,241,.06));border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:18px 20px;margin:14px 0}
+.inv-sum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;margin-top:10px}
+.inv-sum-item{background:var(--bg1);border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+.inv-sum-label{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.inv-sum-val{font-size:16px;font-weight:800;color:var(--green)}
+.inv-risk-low{color:var(--green)!important}
+.inv-risk-med{color:var(--yellow)!important}
+.inv-risk-high{color:var(--red)!important}
+.inv-notes-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px 18px;margin-top:14px}
+.inv-notes-box ul{padding-left:18px;margin:0}
+.inv-notes-box li{font-size:12px;color:var(--t2);line-height:1.75;margin-bottom:3px}
+.inv-cost-tbl{width:100%;border-collapse:collapse;margin:10px 0}
+.inv-cost-tbl td{font-size:12px;padding:7px 0;border-bottom:1px solid var(--border);color:var(--t2)}
+.inv-cost-tbl td:last-child{text-align:right;font-weight:600;color:var(--t1);padding-left:10px;white-space:nowrap}
+.inv-cost-tbl tr:last-child td{border-bottom:none;font-weight:700;font-size:13px;padding-top:10px}
+.inv-cost-tbl tr:last-child td:last-child{color:var(--green)}
+.inv-trend-mini{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 12px;margin-top:10px}
+.inv-trend-hdr{font-size:10px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px}
+.inv-trend-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:3px}
+.inv-trend-lbl{color:var(--t3)}
+.inv-trend-val{font-weight:700}
+
+/* ── USAGE BAR ───────────────────────────────────────────── */
+.trend-usage-bar{display:flex;align-items:center;gap:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:0;margin-bottom:20px;overflow:hidden;flex-wrap:wrap}
+.tub-segment{display:flex;align-items:center;gap:8px;padding:9px 16px;flex-wrap:wrap;gap:6px}
+.tub-segment+.tub-segment{border-left:1px solid var(--border)}
+.tub-lbl{font-size:11px;font-weight:600;color:var(--t3);white-space:nowrap;display:flex;align-items:center;gap:4px}
+.tub-tip{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--border);color:var(--t3);font-size:9px;font-weight:700;cursor:help;text-decoration:none;flex-shrink:0;line-height:1}
+.tub-tip:hover{background:var(--acc);color:#fff}
+.tub-track{width:80px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;flex-shrink:0}
+.tub-fill{height:100%;width:0%;border-radius:2px;transition:width .5s ease,background-color .5s ease;background:var(--green)}
+.tub-count{font-size:11px;color:var(--t2);white-space:nowrap}
+.tub-warn{font-size:11px;font-weight:700;color:var(--red);display:none;padding:0 10px}
+.tub-warn.on{display:block}
+@media(max-width:600px){.trend-usage-bar{flex-direction:column;align-items:stretch}.tub-segment+.tub-segment{border-left:none;border-top:1px solid var(--border)}}
+
+/* FOOTER */
+footer{text-align:center;padding:36px 0;color:var(--t3);font-size:12px}
+
+/* ANIM */
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade{animation:fadeup .35s ease forwards}
+
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sb-toggle{background:var(--bg2);border:1px solid var(--border);border-radius:8px;width:36px;height:36px;color:var(--t1);cursor:pointer;font-size:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:'Inter',sans-serif}
+.sb-toggle:hover{border-color:var(--acc2);color:var(--acc2)}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:299;backdrop-filter:blur(2px)}
+.sb-overlay.on{display:block}
+.sidebar{position:fixed;left:-360px;top:0;width:340px;height:100vh;background:var(--bg1);border-right:1px solid var(--border);z-index:300;transition:left .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+.sidebar.open{left:0;box-shadow:6px 0 40px rgba(0,0,0,.45)}
+.sb-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+.sb-title{font-size:14px;font-weight:700;color:var(--t1)}
+.sb-close{background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px;transition:color .15s;font-family:'Inter',sans-serif}
+.sb-close:hover{color:var(--t1)}
+.sb-tabs{display:flex;gap:2px;padding:7px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+.sb-tab{flex:1;background:transparent;border:none;padding:7px 4px;color:var(--t3);font-size:10px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;border-radius:6px;transition:all .15s;white-space:nowrap;letter-spacing:.2px}
+.sb-tab.on{background:var(--g1);color:#fff}
+.sb-tab:hover:not(.on){color:var(--t1);background:var(--border)}
+.sb-body{flex:1;overflow-y:auto;padding:12px}
+.sb-body::-webkit-scrollbar{width:3px}
+.sb-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.sb-pane{display:none}
+.sb-pane.on{display:block}
+.sb-section-t{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 4px}
+.sb-section-t:first-child{margin-top:0}
+.sb-section-d{font-size:11px;color:var(--t3);margin-bottom:10px;line-height:1.5}
+.sb-empty{font-size:11px;color:var(--t3);text-align:center;padding:20px 12px;line-height:1.6;border:1px dashed var(--border);border-radius:8px;margin-top:6px}
+.sb-divider{height:1px;background:var(--border);margin:14px 0}
+.hist-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;border:1px solid var(--border);margin-bottom:5px;cursor:pointer;transition:all .15s;background:var(--bg2)}
+.hist-item:hover{border-color:var(--acc);background:var(--bg3)}
+.hist-score{font-size:16px;font-weight:800;min-width:24px;text-align:center;flex-shrink:0}
+.hist-name{font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-date{font-size:10px;color:var(--t3);margin-top:2px}
+.hist-del{background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;padding:0 3px;line-height:1;flex-shrink:0;transition:color .15s;font-family:'Inter',sans-serif}
+.hist-del:hover{color:var(--red)}
+.rank-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;border:1px solid var(--border);margin-bottom:5px;cursor:pointer;transition:all .15s;background:var(--bg2)}
+.rank-item:hover{border-color:var(--acc);background:var(--bg3)}
+.rank-num{font-size:13px;font-weight:800;min-width:26px;text-align:center;flex-shrink:0}
+.rank-name{font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-meta{font-size:10px;color:var(--t3);margin-top:1px}
+.rank-rec{font-size:10px;margin-top:1px;font-weight:600}
+.rank-score{font-size:14px;font-weight:800;flex-shrink:0}
+.sb-select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--t1);font-size:12px;font-family:'Inter',sans-serif;outline:none;cursor:pointer;margin-bottom:10px}
+.sb-select:focus{border-color:var(--acc)}
+.cmp-run-btn{width:100%;background:var(--g1);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:opacity .2s;margin-bottom:4px}
+.cmp-run-btn:hover{opacity:.85}
+/* Compare modal */
+.cmp-modal{display:none;position:fixed;inset:0;z-index:400;align-items:center;justify-content:center;padding:20px}
+.cmp-modal.on{display:flex}
+.cmp-modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)}
+.cmp-modal-box{position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;z-index:1;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.cmp-modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+.cmp-modal-body{overflow-y:auto;padding:24px;flex:1}
+.cmp-modal-body::-webkit-scrollbar{width:4px}
+.cmp-modal-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.cmp-tbl{width:100%;border-collapse:collapse}
+.cmp-tbl th{font-size:12px;font-weight:600;padding:10px 12px;border-bottom:2px solid var(--border2);text-align:center}
+.cmp-tbl th:first-child{text-align:left;color:var(--t3);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.cmp-tbl td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;text-align:center}
+.cmp-tbl td:first-child{text-align:left;font-size:12px;color:var(--t2)}
+.cmp-tbl tr:last-child td{border-bottom:none}
+.cmp-tbl tr:hover td{background:rgba(255,255,255,.02)}
+.cmp-win{background:rgba(16,185,129,.12);color:#34d399;font-weight:700}
+.cmp-lose{color:var(--t2)}
+.cmp-draw{color:var(--t3)}
+
+/* ── MAIN TABS (always visible, full-width nav) ───────────── */
+.main-tabs-wrap{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 24px}
+.main-tabs-inner{max-width:1400px;margin:0 auto;display:flex;gap:3px;padding:8px 0}
+.main-tab{background:transparent;border:none;color:var(--t3);font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;padding:9px 16px;border-radius:8px;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.main-tab:hover{color:var(--t1);background:var(--bg2)}
+.main-tab.on{color:#fff;background:var(--g1)}
+.main-tab.trend-tab{margin-left:auto}
+
+/* ── TRENDING PAGE ────────────────────────────────────────── */
+.trending-page{display:none;max-width:1400px;margin:0 auto;padding:32px 24px}
+
+.trend-hero{text-align:center;margin-bottom:32px}
+.trend-hero h2{font-size:38px;font-weight:900;margin-bottom:10px}
+.trend-hero p{font-size:16px;color:var(--t2);max-width:540px;margin:0 auto}
+
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:28px}
+.cat-btn{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--t2);font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;text-align:left;display:flex;align-items:center;gap:8px;line-height:1.3}
+.cat-btn:hover{border-color:var(--acc2);color:var(--t1);background:var(--bg3)}
+.cat-btn.active{background:var(--accglow);border-color:var(--acc);color:var(--acc2)}
+
+.trend-controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.trend-updated{font-size:12px;color:var(--t3)}
+.trend-refresh-btn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--t2);font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.trend-refresh-btn:hover{border-color:var(--acc2);color:var(--t1)}
+
+.trend-load{text-align:center;padding:60px 20px;color:var(--t2)}
+.trend-load .t-spin{width:40px;height:40px;border:3px solid var(--border2);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+.trend-load p{font-size:14px}
+
+.trend-ai-box{background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(139,92,246,.06));border:1px solid rgba(99,102,241,.25);border-radius:14px;padding:22px 26px;margin-bottom:24px}
+.trend-ai-box h3{font-size:16px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.trend-ai-summary{font-size:14px;color:var(--t2);line-height:1.75}
+
+.trend-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.trend-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;transition:all .2s;animation:fadeup .35s ease forwards;opacity:0}
+.trend-card:hover{border-color:var(--acc2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.trend-card-rank{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.trend-card-rank span{background:var(--g1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:16px;font-weight:900}
+.trend-card-title{font-size:16px;font-weight:700;color:var(--t1);margin-bottom:6px}
+.trend-card-heat{font-size:12px;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.heat-bar{height:4px;border-radius:2px;background:var(--border2);flex:1;overflow:hidden;max-width:80px}
+.heat-fill{height:100%;border-radius:2px;background:var(--g1)}
+.trend-card-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.tmeta-item{background:var(--bg3);border-radius:8px;padding:8px 10px}
+.tmeta-label{font-size:10px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
+.tmeta-val{font-size:13px;font-weight:700;color:var(--t1)}
+.trend-card-insight{font-size:12px;color:var(--t2);line-height:1.6;border-top:1px solid var(--border);padding-top:10px;margin-top:4px}
+.trend-tag{display:inline-block;background:var(--accglow);border:1px solid rgba(99,102,241,.2);border-radius:4px;padding:2px 8px;font-size:10px;color:var(--acc2);font-weight:600;margin:2px}
+.trend-tags{margin-top:8px}
+.trend-empty{text-align:center;padding:60px 20px;color:var(--t3);font-size:14px;line-height:1.7}
+.trend-err{text-align:center;padding:40px 20px;color:var(--red);font-size:14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:12px}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button id="sbToggle" class="sb-toggle" onclick="toggleSidebar()" title="Research Panel">☰</button>
+      <a href="#" class="logo">
+        <div class="logo-icon">🔍</div>
+        <span class="logo-txt">FBA Scout Pro</span>
+      </a>
+    </div>
+    <div class="apirow">
+      <label for="apiKey">Anthropic API Key:</label>
+      <input type="password" id="apiKey" class="apiinput" placeholder="sk-ant-api03-...">
+    </div>
+  </div>
+</header>
+
+<!-- ===== MAIN TAB NAV (always visible) ===== -->
+<div class="main-tabs-wrap">
+  <div class="main-tabs-inner">
+    <button class="main-tab on" id="mainTab-amazon"     onclick="mainTab('amazon',this)">📦 Amazon Research</button>
+    <button class="main-tab"    id="mainTab-alibaba"    onclick="mainTab('alibaba',this)">🏭 Alibaba Sourcing</button>
+    <button class="main-tab"    id="mainTab-calculator" onclick="mainTab('calculator',this)">🧮 Profit Calculator</button>
+    <button class="main-tab"    id="mainTab-summary"    onclick="mainTab('summary',this)">🎯 AI Summary</button>
+    <button class="main-tab trend-tab" id="mainTab-trending" onclick="mainTab('trending',this)">🔥 What's Trending</button>
+  </div>
+</div>
+
+<section class="hero">
+  <div class="badge">⚡ Powered by Claude AI</div>
+  <h1>Find <span class="hl">Winning FBA</span> Products</h1>
+  <p>Deep research across Amazon Australia & Alibaba with AI-powered insights to discover high-profit opportunities before your competitors do.</p>
+  <div class="searchrow">
+    <input type="text" id="kw" class="srch-in" placeholder="Enter product keyword  e.g.  insulated water bottle, bamboo cutting board...">
+    <button id="goBtn" class="srch-btn" onclick="doSearch()">Analyse Product →</button>
+  </div>
+</section>
+
+<div class="errbox" id="errBox"><strong>Error:</strong> <span id="errMsg"></span></div>
+
+<div class="loading" id="loadDiv">
+  <div class="spin"></div>
+  <div class="load-txt">Running deep product analysis...</div>
+  <div class="load-step" id="loadStep">Initialising AI research engine...</div>
+</div>
+
+<div class="results" id="resDiv">
+
+  <!-- OVERVIEW -->
+  <div class="overview fade" id="overview">
+    <div class="ov-head">
+      <div>
+        <div class="prod-name" id="pName">—</div>
+        <div class="prod-meta" id="pMeta">—</div>
+      </div>
+      <div class="rec-badge" id="recBadge">—</div>
+    </div>
+    <div class="scores-row">
+      <div class="sc-card">
+        <div class="sc-ring"><svg viewBox="0 0 88 88"><circle class="sc-track" cx="44" cy="44" r="34"/><circle class="sc-fill" id="r-overall" cx="44" cy="44" r="34" stroke="#6366f1"/></svg><div class="sc-val" id="v-overall">—</div></div>
+        <div class="sc-lbl">Overall</div>
+      </div>
+      <div class="sc-card">
+        <div class="sc-ring"><svg viewBox="0 0 88 88"><circle class="sc-track" cx="44" cy="44" r="34"/><circle class="sc-fill" id="r-demand" cx="44" cy="44" r="34" stroke="#10b981"/></svg><div class="sc-val" id="v-demand">—</div></div>
+        <div class="sc-lbl">Demand</div>
+      </div>
+      <div class="sc-card">
+        <div class="sc-ring"><svg viewBox="0 0 88 88"><circle class="sc-track" cx="44" cy="44" r="34"/><circle class="sc-fill" id="r-comp" cx="44" cy="44" r="34" stroke="#f59e0b"/></svg><div class="sc-val" id="v-comp">—</div></div>
+        <div class="sc-lbl">Competition</div>
+      </div>
+      <div class="sc-card">
+        <div class="sc-ring"><svg viewBox="0 0 88 88"><circle class="sc-track" cx="44" cy="44" r="34"/><circle class="sc-fill" id="r-profit" cx="44" cy="44" r="34" stroke="#06b6d4"/></svg><div class="sc-val" id="v-profit">—</div></div>
+        <div class="sc-lbl">Profitability</div>
+      </div>
+      <div class="sc-card">
+        <div class="sc-ring"><svg viewBox="0 0 88 88"><circle class="sc-track" cx="44" cy="44" r="34"/><circle class="sc-fill" id="r-trend" cx="44" cy="44" r="34" stroke="#8b5cf6"/></svg><div class="sc-val" id="v-trend">—</div></div>
+        <div class="sc-lbl">Trend</div>
+      </div>
+      <div class="sc-card">
+        <div class="sc-ring"><svg viewBox="0 0 88 88"><circle class="sc-track" cx="44" cy="44" r="34"/><circle class="sc-fill" id="r-opp" cx="44" cy="44" r="34" stroke="#ec4899"/></svg><div class="sc-val" id="v-opp">—</div></div>
+        <div class="sc-lbl">Opportunity</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== AMAZON TAB ===== -->
+  <div class="tab-pane on" id="tp-amazon">
+    <div class="sec-hdr">
+      <div class="sec-icon si-orange">📦</div>
+      <div><h2>Amazon Market Research</h2><p>US vs AU market comparison — all prices in AUD (1 USD = 1.55 AUD)</p></div>
+    </div>
+
+    <!-- shared: BSR, keywords, reviews -->
+    <div class="g3" style="margin-bottom:14px">
+      <div class="card">
+        <div class="card-t">📊 BSR & Category (AU)</div>
+        <div class="dr"><span class="dl">Best Seller Rank</span><span class="dv va" id="a-bsr">—</span></div>
+        <div class="dr"><span class="dl">Main Category</span><span class="dv" id="a-cat">—</span></div>
+        <div class="dr"><span class="dl">Subcategory</span><span class="dv" id="a-sub">—</span></div>
+        <div class="dr"><span class="dl">Seasonal Demand</span><span class="dv" id="a-season">—</span></div>
+        <div class="dr"><span class="dl">Revenue Trend</span><span class="dv" id="a-trend">—</span></div>
+      </div>
+      <div class="card">
+        <div class="card-t">⭐ Reviews & Search Demand</div>
+        <div class="dr"><span class="dl">Avg Review Count (AU)</span><span class="dv" id="a-rc">—</span></div>
+        <div class="dr"><span class="dl">Avg Star Rating</span><span class="dv vy" id="a-rat">—</span></div>
+        <div class="dr"><span class="dl">Review Velocity</span><span class="dv" id="a-rv">—</span></div>
+        <div class="dr"><span class="dl">Search Volume / mo</span><span class="dv" id="a-sv">—</span></div>
+        <div class="dr"><span class="dl">Keyword Competition</span><span class="dv" id="a-kc">—</span></div>
+      </div>
+      <div class="card">
+        <div class="card-t">🔑 Top Traffic Keywords</div>
+        <div id="a-kws" class="tags" style="margin-top:0"></div>
+      </div>
+    </div>
+
+    <!-- US vs AU side by side -->
+    <div class="market-split">
+      <!-- US COLUMN -->
+      <div class="market-col">
+        <div class="market-badge us-badge">🇺🇸 Amazon US Market</div>
+        <div class="card">
+          <div class="card-t">💰 Revenue (AUD)</div>
+          <div class="dr"><span class="dl">Est. Monthly Sales</span><span class="dv vg" id="us-sales">—</span></div>
+          <div class="dr"><span class="dl">Est. Monthly Revenue</span><span class="dv vg" id="us-rev">—</span></div>
+          <div class="dr"><span class="dl">Daily Sales</span><span class="dv" id="us-daily">—</span></div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="card-t">🏷️ Pricing (AUD)</div>
+          <div class="dr"><span class="dl">Price Range</span><span class="dv" id="us-prange">—</span></div>
+          <div class="dr"><span class="dl">Avg Market Price</span><span class="dv" id="us-avgp">—</span></div>
+          <div class="dr"><span class="dl">Recommended Price</span><span class="dv va" id="us-recp">—</span></div>
+          <div class="dr"><span class="dl">Break-Even Price</span><span class="dv vy" id="us-bep">—</span></div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="card-t">👥 Competition</div>
+          <div class="dr"><span class="dl">Competition Level</span><span class="dv vr" id="us-comp">—</span></div>
+          <div class="dr"><span class="dl">Total Competitors</span><span class="dv" id="us-tc">—</span></div>
+          <div class="dr"><span class="dl">FBA Sellers</span><span class="dv" id="us-fba">—</span></div>
+          <div class="dr"><span class="dl">New Seller Opportunity</span><span class="dv vy" id="us-nso">—</span></div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="card-t">💸 Amazon US FBA Fees (AUD)</div>
+          <div class="dr"><span class="dl">FBA Fulfilment Fee</span><span class="dv vr" id="us-ff">—</span></div>
+          <div class="dr"><span class="dl">FBA Storage Fee / mo</span><span class="dv vr" id="us-sf">—</span></div>
+          <div class="dr"><span class="dl">Amazon Referral Fee</span><span class="dv vr" id="us-rf">—</span></div>
+          <div class="dr"><span class="dl">Shipping to Warehouse</span><span class="dv vy" id="us-sw">—</span></div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="card-t">💵 Unit Economics</div>
+          <div class="dr"><span class="dl">Profit per Unit</span><span class="dv vg" id="us-pu">—</span></div>
+          <div class="dr"><span class="dl">Profit Margin</span><span class="dv vg" id="us-pm">—</span></div>
+          <div class="dr"><span class="dl">ROI</span><span class="dv va" id="us-roi">—</span></div>
+          <div class="dr"><span class="dl">Break-Even Price</span><span class="dv vy" id="us-be">—</span></div>
+        </div>
+        <div class="market-score-box">
+          <div>
+            <div class="msc-label">US Opportunity Score</div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:3px">
+            <div class="msc-val" id="us-opp">—</div>
+            <div class="msc-max">/10</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AU COLUMN -->
+      <div class="market-col">
+        <div class="market-badge au-badge">🇦🇺 Amazon AU Market</div>
+        <div class="card">
+          <div class="card-t">💰 Revenue (AUD)</div>
+          <div class="dr"><span class="dl">Est. Monthly Sales</span><span class="dv vg" id="a-sales">—</span></div>
+          <div class="dr"><span class="dl">Est. Monthly Revenue</span><span class="dv vg" id="a-rev">—</span></div>
+          <div class="dr"><span class="dl">Daily Sales</span><span class="dv" id="a-daily">—</span></div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="card-t">🏷️ Pricing (AUD)</div>
+          <div class="dr"><span class="dl">Price Range</span><span class="dv" id="a-prange">—</span></div>
+          <div class="dr"><span class="dl">Avg Market Price</span><span class="dv" id="a-avgp">—</span></div>
+          <div class="dr"><span class="dl">Recommended Price</span><span class="dv va" id="a-recp">—</span></div>
+          <div class="dr"><span class="dl">Break-Even Price</span><span class="dv vy" id="a-bep">—</span></div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="card-t">👥 Competition</div>
+          <div class="dr"><span class="dl">Competition Level</span><span class="dv vg" id="a-comp">—</span></div>
+          <div class="dr"><span class="dl">Total Competitors</span><span class="dv" id="a-tc">—</span></div>
+          <div class="dr"><span class="dl">FBA Sellers</span><span class="dv va" id="a-fba">—</span></div>
+          <div class="dr"><span class="dl">New Seller Opportunity</span><span class="dv vg" id="a-nso">—</span></div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="card-t">💸 Amazon AU FBA Fees (AUD)</div>
+          <div class="dr"><span class="dl">FBA Fulfilment Fee</span><span class="dv vr" id="a-ff">—</span></div>
+          <div class="dr"><span class="dl">FBA Storage Fee / mo</span><span class="dv vr" id="a-sf">—</span></div>
+          <div class="dr"><span class="dl">Amazon Referral Fee</span><span class="dv vr" id="a-rf">—</span></div>
+          <div class="dr"><span class="dl">Shipping to Warehouse</span><span class="dv vy" id="a-sw">—</span></div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="card-t">💵 Unit Economics</div>
+          <div class="dr"><span class="dl">Profit per Unit</span><span class="dv vg" id="a-pu">—</span></div>
+          <div class="dr"><span class="dl">Profit Margin</span><span class="dv vg" id="a-pm">—</span></div>
+          <div class="dr"><span class="dl">ROI</span><span class="dv va" id="a-roi">—</span></div>
+          <div class="dr"><span class="dl">Break-Even Price</span><span class="dv vy" id="a-be2">—</span></div>
+        </div>
+        <div class="market-score-box">
+          <div>
+            <div class="msc-label">AU Opportunity Score</div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:3px">
+            <div class="msc-val" id="au-opp">—</div>
+            <div class="msc-max">/10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMBINED RECOMMENDATION -->
+    <div class="card g1c market-rec-box">
+      <div class="card-t">🏆 Combined Market Recommendation</div>
+      <div class="market-rec-row">
+        <div>
+          <div class="mri-label">Recommended Market to Launch First</div>
+          <div class="mri-val" id="mc-recommended">—</div>
+        </div>
+        <div>
+          <div class="mri-label">Can You Sell in Both?</div>
+          <div class="mri-val" id="mc-both">—</div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.75;margin:6px 0 10px" id="mc-why">—</div>
+      <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">📋 Launch Strategy</div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.75;margin-bottom:14px" id="mc-strategy">—</div>
+      <div class="g2">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--acc2);margin-bottom:6px">🇺🇸 US Market Advantages</div>
+          <ul class="ilist chk" id="mc-us-adv"></ul>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#34d399;margin-bottom:6px">🇦🇺 AU Market Advantages</div>
+          <ul class="ilist chk" id="mc-au-adv"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Competitor table + sentiment -->
+    <div class="card g1c">
+      <div class="card-t">🏆 Top AU Competitor Breakdown</div>
+      <table class="tbl"><thead><tr><th>Competitor</th><th>BSR</th><th>Price (AUD)</th><th>Reviews</th><th>Rating</th></tr></thead>
+      <tbody id="a-compTbl"></tbody></table>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="card-t" style="color:var(--green)">😊 Customer Praise (What's Working)</div>
+        <ul class="ilist chk" id="a-praise"></ul>
+      </div>
+      <div class="card">
+        <div class="card-t" style="color:var(--yellow)">😞 Customer Complaints (Your Opportunity)</div>
+        <ul class="ilist warn" id="a-complaints"></ul>
+      </div>
+    </div>
+
+    <div class="card g1c">
+      <div class="card-t" style="color:var(--red)">🚩 Red Flags in This Niche</div>
+      <ul class="ilist bad" id="a-redflags"></ul>
+    </div>
+
+    <!-- ===== TOTAL INVESTMENT ESTIMATE ===== -->
+    <div class="card g1c" style="margin-top:14px">
+      <div class="sec-hdr" style="margin-bottom:16px">
+        <div class="sec-icon" style="background:rgba(245,158,11,.2)">💰</div>
+        <div><h2>Total Investment Estimate</h2><p>Everything you need to start selling this product on Amazon — all amounts in AUD</p></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">📦 Startup Cost Breakdown (Recommended Budget Scenario)</div>
+      <table class="inv-cost-tbl">
+        <tr><td>MOQ × Unit Cost (Alibaba)</td><td id="inv-moq-cost">—</td></tr>
+        <tr><td>Sea Freight China → AU Amazon Warehouse</td><td id="inv-sea-freight">—</td></tr>
+        <tr><td>Australian Import Duties &amp; Customs Fees</td><td id="inv-import-duties">—</td></tr>
+        <tr><td>Amazon FBA Storage Fees (first 3 months)</td><td id="inv-storage-3mo">—</td></tr>
+        <tr><td>Product Photography</td><td id="inv-photography">—</td></tr>
+        <tr><td>Amazon Seller Account Fee (1 month)</td><td id="inv-seller-fee">—</td></tr>
+        <tr><td>Initial PPC Advertising Budget (month 1)</td><td id="inv-ppc">—</td></tr>
+        <tr><td>Product Samples (before bulk order)</td><td id="inv-samples">—</td></tr>
+        <tr><td>Custom Packaging &amp; Labelling</td><td id="inv-packaging">—</td></tr>
+        <tr><td>Barcode / FNSKU Registration</td><td id="inv-barcode">—</td></tr>
+        <tr><td><strong>Estimated Total Startup Cost</strong></td><td id="inv-total-costs"><strong>—</strong></td></tr>
+      </table>
+
+      <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:20px 0 10px">📊 Budget Scenarios</div>
+      <div class="inv-scenario-grid">
+        <!-- MINIMUM -->
+        <div class="inv-scenario inv-scen-min">
+          <div class="inv-scen-badge">⚠️ Minimum Budget</div>
+          <div class="inv-scen-amount" id="inv-min-total">—</div>
+          <div class="inv-scen-details" id="inv-min-details">—</div>
+          <div class="dr"><span class="dl">Est. Monthly Revenue</span><span class="dv vr" id="inv-min-rev">—</span></div>
+          <div class="dr"><span class="dl">Time to Break Even</span><span class="dv" id="inv-min-bre">—</span></div>
+          <div class="dr" style="border:none"><span class="dl">Risk Level</span><span class="dv vr" id="inv-min-risk">High</span></div>
+        </div>
+        <!-- RECOMMENDED -->
+        <div class="inv-scenario inv-scen-rec">
+          <div class="inv-rec-star">⭐ Recommended</div>
+          <div class="inv-scen-badge">✅ Recommended Budget</div>
+          <div class="inv-scen-amount" id="inv-rec-total">—</div>
+          <div class="inv-scen-details" id="inv-rec-details">—</div>
+          <div class="dr"><span class="dl">Est. Monthly Revenue</span><span class="dv vg" id="inv-rec-rev">—</span></div>
+          <div class="dr"><span class="dl">Time to Break Even</span><span class="dv" id="inv-rec-bre">—</span></div>
+          <div class="dr" style="border:none"><span class="dl">Risk Level</span><span class="dv vy" id="inv-rec-risk">Medium</span></div>
+        </div>
+        <!-- IDEAL -->
+        <div class="inv-scenario inv-scen-ideal">
+          <div class="inv-scen-badge">🚀 Ideal Budget</div>
+          <div class="inv-scen-amount" id="inv-ideal-total">—</div>
+          <div class="inv-scen-details" id="inv-ideal-details">—</div>
+          <div class="dr"><span class="dl">Est. Monthly Revenue</span><span class="dv va" id="inv-ideal-rev">—</span></div>
+          <div class="dr"><span class="dl">Time to Break Even</span><span class="dv" id="inv-ideal-bre">—</span></div>
+          <div class="dr" style="border:none"><span class="dl">Risk Level</span><span class="dv vg" id="inv-ideal-risk">Low</span></div>
+        </div>
+      </div>
+
+      <!-- Summary box -->
+      <div class="inv-sum-box">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);display:flex;align-items:center;gap:6px">📋 Investment Summary</div>
+        <div class="inv-sum-grid">
+          <div class="inv-sum-item">
+            <div class="inv-sum-label">Minimum to Start</div>
+            <div class="inv-sum-val" id="inv-sum-min">—</div>
+          </div>
+          <div class="inv-sum-item">
+            <div class="inv-sum-label">Recommended Amount</div>
+            <div class="inv-sum-val" id="inv-sum-rec">—</div>
+          </div>
+          <div class="inv-sum-item">
+            <div class="inv-sum-label">Monthly Profit (Recommended)</div>
+            <div class="inv-sum-val" id="inv-sum-profit">—</div>
+          </div>
+          <div class="inv-sum-item">
+            <div class="inv-sum-label">Estimated Payback Period</div>
+            <div class="inv-sum-val" style="color:var(--acc2)" id="inv-sum-payback">—</div>
+          </div>
+          <div class="inv-sum-item">
+            <div class="inv-sum-label">Overall Risk Rating</div>
+            <div class="inv-sum-val" id="inv-sum-risk">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Important notes -->
+      <div class="inv-notes-box">
+        <div style="font-size:11px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">⚠️ Important Notes</div>
+        <ul>
+          <li>These are AI-generated estimates only — always get real supplier quotes, check current shipping rates, and verify Amazon fee structures before investing.</li>
+          <li>Order samples from 2–3 suppliers before placing any bulk order to validate product quality and branding capability.</li>
+          <li>Add a <strong>20% buffer</strong> to your budget for unexpected costs such as extra QC inspections, reshipments, photography reshoots, or PPC overruns.</li>
+          <li>Your PPC budget may vary significantly depending on keyword competition — budget more aggressively in the first 60 days to build ranking velocity.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ALIBABA TAB ===== -->
+  <div class="tab-pane" id="tp-alibaba">
+    <div class="sec-hdr">
+      <div class="sec-icon si-blue">🏭</div>
+      <div><h2>Alibaba Sourcing Intelligence</h2><p>Supplier analysis, pricing, private label & shipping to Australia</p></div>
+    </div>
+
+    <div class="g3">
+      <div class="card">
+        <div class="card-t">🏭 Supplier Profile</div>
+        <div class="dr"><span class="dl">Supplier Types</span><span class="dv" id="al-st">—</span></div>
+        <div class="dr"><span class="dl">Years in Business</span><span class="dv" id="al-yib">—</span></div>
+        <div class="dr"><span class="dl">Response Rate</span><span class="dv vg" id="al-rr">—</span></div>
+        <div class="dr"><span class="dl">On-Time Delivery</span><span class="dv vg" id="al-otd">—</span></div>
+        <div class="dr"><span class="dl">Reorder Rate Signal</span><span class="dv va" id="al-ror">—</span></div>
+      </div>
+      <div class="card">
+        <div class="card-t">💲 Pricing & MOQ</div>
+        <div class="dr"><span class="dl">Unit Price Range (AUD)</span><span class="dv vg" id="al-upr">—</span></div>
+        <div class="dr"><span class="dl">Min. Order Quantity</span><span class="dv" id="al-moq">—</span></div>
+        <div class="dr"><span class="dl">Sample Price (AUD)</span><span class="dv vy" id="al-sp">—</span></div>
+        <div class="dr"><span class="dl">Sample Availability</span><span class="dv" id="al-sa">—</span></div>
+      </div>
+      <div class="card">
+        <div class="card-t">🎨 Private Label Options</div>
+        <div class="dr"><span class="dl">Custom Branding</span><span class="dv vg" id="al-cb">—</span></div>
+        <div class="dr"><span class="dl">Custom Packaging</span><span class="dv vg" id="al-cp">—</span></div>
+        <div class="dr"><span class="dl">OEM Available</span><span class="dv" id="al-oem">—</span></div>
+        <div class="dr"><span class="dl">ODM Available</span><span class="dv" id="al-odm">—</span></div>
+      </div>
+      <div class="card">
+        <div class="card-t">⭐ Quality & Communication</div>
+        <div class="dr"><span class="dl">Quality Feedback</span><span class="dv" id="al-qf">—</span></div>
+        <div class="dr"><span class="dl">Communication Rating</span><span class="dv vg" id="al-cr">—</span></div>
+        <div class="dr"><span class="dl">Dispute History</span><span class="dv" id="al-dh">—</span></div>
+      </div>
+      <div class="card">
+        <div class="card-t">✅ Quality Indicators</div>
+        <div id="al-qi" class="tags" style="margin-top:0"></div>
+      </div>
+      <div class="card">
+        <div class="card-t">💳 Payment Terms Accepted</div>
+        <div id="al-pt" class="tags" style="margin-top:0"></div>
+      </div>
+    </div>
+
+    <div class="card g1c">
+      <div class="card-t">✅ Verified Supplier Indicators</div>
+      <div id="al-vi" class="tags" style="margin-top:0"></div>
+    </div>
+
+    <div class="card g1c">
+      <div class="card-t">🔧 OEM vs ODM — What It Means for This Product</div>
+      <div id="al-oemodm" style="font-size:13px;color:var(--t2);line-height:1.75;margin-top:4px"></div>
+    </div>
+
+    <div class="card g1c">
+      <div class="card-t">📉 Price Breaks (Bulk Discounts)</div>
+      <table class="tbl"><thead><tr><th>Order Quantity</th><th>Unit Price (AUD)</th><th>Savings vs Base</th></tr></thead>
+      <tbody id="al-pbTbl"></tbody></table>
+    </div>
+
+    <div class="card g1c">
+      <div class="card-t">🚢 Shipping Options — China to Amazon Warehouses (AUD per unit)</div>
+
+      <div style="font-size:11px;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:.5px;margin:0 0 8px">🇦🇺 To AU Amazon Warehouse</div>
+      <div class="ship-grid">
+        <div class="ship-card" id="sc-sea">
+          <div class="ship-title">🚢 Sea Freight</div>
+          <div class="dr"><span class="dl">Transit Time</span><span class="dv" id="sh-seaT">—</span></div>
+          <div class="dr"><span class="dl">Cost / Unit (AUD)</span><span class="dv" id="sh-seaC">—</span></div>
+        </div>
+        <div class="ship-card" id="sc-air">
+          <div class="ship-title">✈️ Air Freight</div>
+          <div class="dr"><span class="dl">Transit Time</span><span class="dv" id="sh-airT">—</span></div>
+          <div class="dr"><span class="dl">Cost / Unit (AUD)</span><span class="dv" id="sh-airC">—</span></div>
+        </div>
+        <div class="ship-card" id="sc-exp">
+          <div class="ship-title">⚡ Express (DHL/FedEx)</div>
+          <div class="dr"><span class="dl">Transit Time</span><span class="dv" id="sh-expT">—</span></div>
+          <div class="dr"><span class="dl">Cost / Unit (AUD)</span><span class="dv" id="sh-expC">—</span></div>
+        </div>
+      </div>
+      <div class="dr"><span class="dl">Recommended AU Method</span><span class="dv va" id="al-recship">—</span></div>
+      <div class="dr"><span class="dl">🇦🇺 Landed Cost to AU</span><span class="dv vg" id="al-landed-au">—</span></div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--acc2);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">🇺🇸 To US Amazon Warehouse</div>
+      <div class="ship-grid">
+        <div class="ship-card" id="sc-us-sea">
+          <div class="ship-title">🚢 Sea Freight</div>
+          <div class="dr"><span class="dl">Transit Time</span><span class="dv" id="sh-us-seaT">—</span></div>
+          <div class="dr"><span class="dl">Cost / Unit (AUD)</span><span class="dv" id="sh-us-seaC">—</span></div>
+        </div>
+        <div class="ship-card" id="sc-us-air">
+          <div class="ship-title">✈️ Air Freight</div>
+          <div class="dr"><span class="dl">Transit Time</span><span class="dv" id="sh-us-airT">—</span></div>
+          <div class="dr"><span class="dl">Cost / Unit (AUD)</span><span class="dv" id="sh-us-airC">—</span></div>
+        </div>
+        <div class="ship-card" id="sc-us-exp">
+          <div class="ship-title">⚡ Express (DHL/FedEx)</div>
+          <div class="dr"><span class="dl">Transit Time</span><span class="dv" id="sh-us-expT">—</span></div>
+          <div class="dr"><span class="dl">Cost / Unit (AUD)</span><span class="dv" id="sh-us-expC">—</span></div>
+        </div>
+      </div>
+      <div class="dr"><span class="dl">Recommended US Method</span><span class="dv va" id="al-recship-us">—</span></div>
+      <div class="dr"><span class="dl">🇺🇸 Landed Cost to US</span><span class="dv vg" id="al-landed-us">—</span></div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="card-t" style="color:var(--red)">🚩 Supplier Red Flags to Watch</div>
+        <ul class="ilist bad" id="al-rf"></ul>
+      </div>
+      <div class="card">
+        <div class="card-t" style="color:var(--green)">✅ Supplier Evaluation Checklist</div>
+        <div id="al-checklist"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CALCULATOR TAB ===== -->
+  <div class="tab-pane" id="tp-calculator">
+    <div class="sec-hdr">
+      <div class="sec-icon si-green">🧮</div>
+      <div><h2>Profit Calculator — US & AU</h2><p>All values in AUD · Compare profit potential across both markets</p></div>
+    </div>
+
+    <div class="calc-wrap">
+      <!-- Shared inputs -->
+      <div style="font-size:13px;font-weight:600;color:var(--t2);margin-bottom:14px">📦 Shared Cost Inputs (apply to both markets)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px">
+        <div>
+          <label class="calc-lbl">Alibaba Unit Cost (AUD)</label>
+          <input type="number" id="ci-unit" class="calc-in" placeholder="e.g. 9.07" oninput="recalc()">
+        </div>
+        <div>
+          <label class="calc-lbl">USD → AUD Rate</label>
+          <input type="number" id="ci-fx" class="calc-in" placeholder="1.55" value="1.55" oninput="recalc()">
+        </div>
+        <div>
+          <label class="calc-lbl">Other Costs — PPC, photos, etc. (AUD)</label>
+          <input type="number" id="ci-other" class="calc-in" placeholder="e.g. 1.55" oninput="recalc()">
+        </div>
+      </div>
+
+      <div class="calc-mkt-grid">
+        <!-- AU INPUTS -->
+        <div class="calc-mkt-col">
+          <div class="calc-mkt-hdr"><span style="color:#34d399">🇦🇺</span> Amazon Australia</div>
+          <label class="calc-lbl">Shipping China → AU per unit (AUD)</label>
+          <input type="number" id="ci-ship-au" class="calc-in" placeholder="e.g. 3.41" oninput="recalc()">
+          <label class="calc-lbl">AU Import Duties per unit (AUD)</label>
+          <input type="number" id="ci-duty-au" class="calc-in" placeholder="e.g. 0.91" oninput="recalc()">
+          <label class="calc-lbl">Amazon AU FBA Fulfilment Fee (AUD)</label>
+          <input type="number" id="ci-fbaf-au" class="calc-in" placeholder="e.g. 7.75" oninput="recalc()">
+          <label class="calc-lbl">Amazon AU Storage Fee / unit / mo (AUD)</label>
+          <input type="number" id="ci-stor-au" class="calc-in" placeholder="e.g. 0.43" oninput="recalc()">
+          <label class="calc-lbl">Amazon AU Referral Fee (AUD)</label>
+          <input type="number" id="ci-ref-au" class="calc-in" placeholder="e.g. 5.40" oninput="recalc()">
+          <label class="calc-lbl">AU Selling Price (AUD)</label>
+          <input type="number" id="ci-sell-au" class="calc-in" placeholder="e.g. 44.99" oninput="recalc()">
+          <label class="calc-lbl">Est. AU Monthly Sales (units)</label>
+          <input type="number" id="ci-units-au" class="calc-in" placeholder="e.g. 450" oninput="recalc()">
+        </div>
+
+        <!-- US INPUTS -->
+        <div class="calc-mkt-col">
+          <div class="calc-mkt-hdr"><span style="color:var(--acc2)">🇺🇸</span> Amazon United States</div>
+          <label class="calc-lbl">Shipping China → US per unit (AUD)</label>
+          <input type="number" id="ci-ship-us" class="calc-in" placeholder="e.g. 3.41" oninput="recalc()">
+          <label class="calc-lbl">US Import Duties per unit (AUD)</label>
+          <input type="number" id="ci-duty-us" class="calc-in" placeholder="e.g. 1.55" oninput="recalc()">
+          <label class="calc-lbl">Amazon US FBA Fulfilment Fee (AUD)</label>
+          <input type="number" id="ci-fbaf-us" class="calc-in" placeholder="e.g. 11.78" oninput="recalc()">
+          <label class="calc-lbl">Amazon US Storage Fee / unit / mo (AUD)</label>
+          <input type="number" id="ci-stor-us" class="calc-in" placeholder="e.g. 0.93" oninput="recalc()">
+          <label class="calc-lbl">Amazon US Referral Fee (AUD)</label>
+          <input type="number" id="ci-ref-us" class="calc-in" placeholder="e.g. 6.88" oninput="recalc()">
+          <label class="calc-lbl">US Selling Price (AUD)</label>
+          <input type="number" id="ci-sell-us" class="calc-in" placeholder="e.g. 57.35" oninput="recalc()">
+          <label class="calc-lbl">Est. US Monthly Sales (units)</label>
+          <input type="number" id="ci-units-us" class="calc-in" placeholder="e.g. 1800" oninput="recalc()">
+        </div>
+      </div>
+
+      <div class="ai-hint" style="margin-top:16px">
+        <div class="ai-hint-t">AI Suggested Values</div>
+        <div class="ai-hint-v" id="aiHint">Run a product search first to populate AI estimates.</div>
+        <button class="fill-btn" onclick="fillAI()">↑ Fill with AI Estimates</button>
+      </div>
+
+      <!-- RESULTS -->
+      <div style="font-size:13px;font-weight:700;color:var(--t1);margin:24px 0 12px">📊 Profit Results — Side by Side</div>
+      <div class="calc-mkt-grid">
+        <!-- AU RESULTS -->
+        <div class="calc-mkt-col">
+          <div class="calc-mkt-hdr"><span style="color:#34d399">🇦🇺</span> Amazon Australia Results</div>
+          <div class="calc-res">
+            <div class="cres-row"><span style="color:var(--t2)">Unit Cost (AUD)</span><span id="cr-unit-au">$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Shipping AU</span><span id="cr-ship-au" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Import Duties AU</span><span id="cr-duty-au" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">FBA Fulfilment AU</span><span id="cr-fbaf-au" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Storage AU</span><span id="cr-stor-au" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Referral Fee AU</span><span id="cr-ref-au" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Other Costs</span><span id="cr-other-au" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row tot"><span>Total Costs AU</span><span id="cr-total-au" style="color:var(--red)">-$0.00</span></div>
+            <div style="margin:8px 0;border-top:2px solid var(--border2)"></div>
+            <div class="cres-row tot"><span>Selling Price AU</span><span id="cr-sell-au">$0.00</span></div>
+            <div class="cres-row profit-r"><span>Profit / Unit AU</span><span id="cr-profit-au" style="color:var(--green)">$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Profit Margin AU</span><span id="cr-margin-au" style="color:var(--green)">0%</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">ROI AU</span><span id="cr-roi-au" style="color:var(--acc2)">0%</span></div>
+            <div style="margin:8px 0;border-top:1px solid var(--border)"></div>
+            <div class="cres-row"><span style="color:var(--t2)">Monthly Profit AU</span><span id="cr-mprofit-au" style="color:var(--green);font-weight:700">$0.00</span></div>
+          </div>
+          <div class="verdict-box" id="calcVerdictAU"></div>
+        </div>
+
+        <!-- US RESULTS -->
+        <div class="calc-mkt-col">
+          <div class="calc-mkt-hdr"><span style="color:var(--acc2)">🇺🇸</span> Amazon United States Results</div>
+          <div class="calc-res">
+            <div class="cres-row"><span style="color:var(--t2)">Unit Cost (AUD)</span><span id="cr-unit-us">$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Shipping US</span><span id="cr-ship-us" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Import Duties US</span><span id="cr-duty-us" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">FBA Fulfilment US</span><span id="cr-fbaf-us" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Storage US</span><span id="cr-stor-us" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Referral Fee US</span><span id="cr-ref-us" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Other Costs</span><span id="cr-other-us" style="color:var(--red)">-$0.00</span></div>
+            <div class="cres-row tot"><span>Total Costs US</span><span id="cr-total-us" style="color:var(--red)">-$0.00</span></div>
+            <div style="margin:8px 0;border-top:2px solid var(--border2)"></div>
+            <div class="cres-row tot"><span>Selling Price US</span><span id="cr-sell-us">$0.00</span></div>
+            <div class="cres-row profit-r"><span>Profit / Unit US</span><span id="cr-profit-us" style="color:var(--green)">$0.00</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">Profit Margin US</span><span id="cr-margin-us" style="color:var(--green)">0%</span></div>
+            <div class="cres-row"><span style="color:var(--t2)">ROI US</span><span id="cr-roi-us" style="color:var(--acc2)">0%</span></div>
+            <div style="margin:8px 0;border-top:1px solid var(--border)"></div>
+            <div class="cres-row"><span style="color:var(--t2)">Monthly Profit US</span><span id="cr-mprofit-us" style="color:var(--green);font-weight:700">$0.00</span></div>
+          </div>
+          <div class="verdict-box" id="calcVerdictUS"></div>
+        </div>
+      </div>
+
+      <!-- Combined verdict -->
+      <div style="margin-top:16px;padding:16px;background:var(--bg1);border-radius:10px">
+        <div style="font-size:12px;font-weight:600;color:var(--t3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Which Market is More Profitable?</div>
+        <div id="calcVerdictText" style="font-size:13px;color:var(--t2);line-height:1.7">Fill in your costs above to get a profitability comparison.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SUMMARY TAB ===== -->
+  <div class="tab-pane" id="tp-summary">
+    <div class="sec-hdr">
+      <div class="sec-icon si-purple">🎯</div>
+      <div><h2>AI Recommendation Summary</h2><p>Claude's complete strategic analysis and action plan</p></div>
+    </div>
+
+    <div class="summ-hero">
+      <h3 id="s-verdict">—</h3>
+      <p id="s-verdictTxt">—</p>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="card-t" style="color:var(--green)">✅ Top 3 Reasons to Pursue</div>
+        <ul class="ilist chk" id="s-reasons"></ul>
+      </div>
+      <div class="card">
+        <div class="card-t" style="color:var(--yellow)">⚠️ Top 3 Risks to Be Aware Of</div>
+        <ul class="ilist warn" id="s-risks"></ul>
+      </div>
+    </div>
+
+    <div class="card g1c">
+      <div class="card-t">🎯 Suggested Sub-Niches (Lower Competition)</div>
+      <div id="s-niches" class="tags" style="margin-top:4px"></div>
+    </div>
+
+    <div class="card g1c">
+      <div class="card-t">📋 Next Steps to Take</div>
+      <ul class="ilist" id="s-steps"></ul>
+    </div>
+
+    <div class="card g1c">
+      <div class="card-t">❓ Questions to Ask Your Supplier</div>
+      <ul class="ilist" id="s-questions"></ul>
+    </div>
+
+    <div class="card g1c">
+      <div class="card-t">📧 Sample Request Template</div>
+      <div class="template-box" id="s-template">—</div>
+    </div>
+  </div>
+
+</div><!-- /results -->
+
+<!-- ===== TRENDING PAGE ===== -->
+<div class="trending-page" id="trendingPage">
+  <div class="trend-hero">
+    <h2>🔥 What's <span style="background:var(--g1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Trending</span></h2>
+    <p>Real-time Google Trends data analysed by Claude AI to surface the hottest FBA opportunities right now.</p>
+  </div>
+  <div class="cat-grid" id="catGrid"></div>
+
+  <!-- Usage tracker bar -->
+  <div class="trend-usage-bar" id="trendUsageBar">
+    <div class="tub-segment">
+      <span class="tub-lbl">
+        Google Trends API
+        <span class="tub-tip" title="Each time you load a fresh category (not from cache), one RapidAPI request is used. The free tier allows ~100 requests/month. Counter resets on the 1st of each month.">?</span>
+      </span>
+      <div class="tub-track"><div class="tub-fill" id="tub-trends-fill"></div></div>
+      <span class="tub-count" id="tub-trends-count">0 / 100 requests used this month</span>
+    </div>
+    <div class="tub-warn" id="tub-trends-warn">⛔ Free tier limit reached for this month</div>
+    <div class="tub-segment">
+      <span class="tub-lbl">
+        AI Tokens (This Session)
+        <span class="tub-tip" title="Estimated Claude AI tokens consumed by trending analyses in this browser session. Input tokens cost ~$4.65 AUD/million; output tokens cost ~$23.25 AUD/million.">?</span>
+      </span>
+      <span class="tub-count" id="tub-token-count">~0 tokens (~$0.000 AUD)</span>
+    </div>
+  </div>
+
+  <div id="trendContent">
+    <div class="trend-empty">👆 Select a category above to see what's trending right now</div>
+  </div>
+</div>
+
+<footer>FBA Scout Pro — Powered by Claude AI &nbsp;|&nbsp; Estimates are AI-generated. Always validate with real market data before investing.</footer>
+
+<!-- ===== SIDEBAR OVERLAY ===== -->
+<div id="sbOverlay" class="sb-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ===== SIDEBAR ===== -->
+<div id="sidebar" class="sidebar">
+  <div class="sb-head">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">📊</span>
+      <span class="sb-title">Research Panel</span>
+    </div>
+    <button class="sb-close" onclick="toggleSidebar()">✕</button>
+  </div>
+
+  <div class="sb-tabs">
+    <button class="sb-tab on" onclick="sbTab('history',this)">📋 History</button>
+    <button class="sb-tab" onclick="sbTab('compare',this)">⚖️ Compare</button>
+    <button class="sb-tab" onclick="sbTab('rankings',this)">🏆 Rankings</button>
+  </div>
+
+  <div class="sb-body">
+
+    <!-- HISTORY PANE -->
+    <div id="sb-history" class="sb-pane on">
+      <div class="sb-section-t">Search History</div>
+      <div class="sb-section-d">Click any product to reload its analysis. First searched date is always preserved.</div>
+      <div id="sb-hist-list"></div>
+    </div>
+
+    <!-- COMPARE PANE -->
+    <div id="sb-compare" class="sb-pane">
+      <div class="sb-section-t">Compare Products</div>
+      <div class="sb-section-d">Select two products from your history for a side-by-side analysis.</div>
+      <div>
+        <div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Product A</div>
+        <select id="cmpSelA" class="sb-select"><option value="">Select product...</option></select>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Product B</div>
+        <select id="cmpSelB" class="sb-select"><option value="">Select product...</option></select>
+      </div>
+      <button class="cmp-run-btn" onclick="doCompare()">Compare Products →</button>
+
+      <div class="sb-divider"></div>
+      <div class="sb-section-t" style="margin-top:0">Saved Comparisons</div>
+      <div id="sb-saved-comps"><div class="sb-empty">No saved comparisons yet.</div></div>
+    </div>
+
+    <!-- RANKINGS PANE -->
+    <div id="sb-rankings" class="sb-pane">
+      <div class="sb-section-t">Product Rankings</div>
+      <div class="sb-section-d">All searched products ranked highest to lowest opportunity score. Updated automatically.</div>
+      <div id="sb-rank-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== COMPARE MODAL ===== -->
+<div id="cmpModal" class="cmp-modal">
+  <div class="cmp-modal-bg" onclick="closeCmpModal()"></div>
+  <div class="cmp-modal-box">
+    <div class="cmp-modal-head">
+      <div>
+        <div style="font-size:17px;font-weight:700">⚖️ Product Comparison</div>
+        <div id="cmpSubtitle" style="font-size:12px;color:var(--t3);margin-top:2px"></div>
+      </div>
+      <button class="sb-close" style="font-size:24px" onclick="closeCmpModal()">✕</button>
+    </div>
+    <div class="cmp-modal-body">
+      <div id="cmpContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ─── Firebase init ─────────────────────────────────────────────────────────
+// NOTE: Firestore security rules must allow read/write for this app to work.
+// In Firebase console → Firestore → Rules, set:
+//   allow read, write: if true;   (for open shared access)
+const _fbApp = firebase.initializeApp({
+  apiKey:            'AIzaSyCbsTGjt5WErxx034ZeQjdZgBxuWAlW6mw',
+  authDomain:        'fba-5b10f.firebaseapp.com',
+  projectId:         'fba-5b10f',
+  storageBucket:     'fba-5b10f.firebasestorage.app',
+  messagingSenderId: '902878575158',
+  appId:             '1:902878575158:web:2a8ea59c610615ba733697',
+  measurementId:     'G-WWDDX7G5K1'
+});
+const db = firebase.firestore();
+
+let aiData = null;
+let aiDefaults = {};
+let currentKeyword = '';
+const LAST_SEARCH_STORAGE_KEY = 'fbaScoutPro_lastSearch';
+
+function loadLastSearchFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(LAST_SEARCH_STORAGE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!saved?.keyword || !saved?.data) return null;
+    return saved;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveLastSearchToLocalStorage(keyword, data) {
+  try {
+    localStorage.setItem(LAST_SEARCH_STORAGE_KEY, JSON.stringify({ keyword, data }));
+  } catch (e) {
+    console.warn('Failed to save last search to localStorage', e);
+  }
+}
+
+// ─── Search ────────────────────────────────────────────────────────────────
+async function doSearch() {
+  const key = document.getElementById('apiKey').value.trim();
+  const kw  = document.getElementById('kw').value.trim();
+  if (!key) { showErr('Please enter your Anthropic API key at the top.'); return; }
+  if (!kw)  { showErr('Please enter a product keyword to research.'); return; }
+  if (kw === currentKeyword && aiData) {
+    clearErr();
+    render(aiData);
+    showResults();
+    animateRings(aiData.amazon);
+    return;
+  }
+  currentKeyword = kw;
+  clearErr();
+  showLoad();
+  hideResults();
+
+  const steps = [
+    'Researching Amazon Australia market data...',
+    'Analysing competition and BSR data...',
+    'Calculating profit margins and fees...',
+    'Researching Alibaba suppliers and pricing...',
+    'Analysing shipping routes to Australia...',
+    'Generating strategic AI recommendations...'
+  ];
+  let si = 0;
+  const iv = setInterval(() => { si=(si+1)%steps.length; setText('loadStep',steps[si]); }, 2800);
+
+  try {
+    const data = await callClaude(key, kw);
+    clearInterval(iv);
+    aiData = data;
+    saveLastSearchToLocalStorage(kw, data);
+    render(data);
+    addToHistory(kw, data); // async Firestore write — no await needed here
+    hideLoad();
+    showResults();
+    animateRings(data.amazon);
+  } catch(e) {
+    clearInterval(iv);
+    hideLoad();
+    showErr(e.message || 'An unexpected error occurred. Please try again.');
+  }
+}
+
+// ─── Claude API ────────────────────────────────────────────────────────────
+async function callClaude(key, kw) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 8000,
+      system: 'You are an expert Amazon FBA product researcher and Alibaba sourcing specialist with deep knowledge of the Australian e-commerce market. Provide comprehensive, realistic, data-driven analysis. Respond with ONLY a valid JSON object — no markdown fences, no explanation, just raw JSON.',
+      messages: [{ role: 'user', content: buildPrompt(kw) }]
+    })
+  });
+
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error?.message || `API error ${res.status}: ${res.statusText}`);
+  }
+
+  const body = await res.json();
+  let txt = body.content[0].text.trim();
+  // Strip possible markdown code fences
+  const m = txt.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (m) txt = m[1].trim();
+  // Find first { to last }
+  const fs = txt.indexOf('{'), ls = txt.lastIndexOf('}');
+  if (fs !== -1 && ls !== -1) txt = txt.slice(fs, ls+1);
+
+  try { return JSON.parse(txt); }
+  catch(e) { throw new Error('Could not parse the AI response. Please try again.'); }
+}
+
+// ─── Prompt ────────────────────────────────────────────────────────────────
+function buildPrompt(kw) {
+  return `Conduct comprehensive Amazon FBA product research for the keyword: "${kw}"
+
+Research BOTH Amazon US (amazon.com) AND Amazon Australia (amazon.com.au) with EQUAL depth and completeness.
+
+KEY RULES:
+- In the JSON below, "amazon" = Amazon AUSTRALIA (amazon.com.au) data. "amazonUS" = Amazon US (amazon.com) data.
+- BOTH sections are MANDATORY. Every single field in "amazonUS" MUST have a real numeric or string value — never null, never 0, never omitted.
+- The US market is 8-15x larger than AU in sales volume. US prices in AUD are typically 20-35% higher than AU prices.
+- US competition is significantly higher than AU (typically 5-10x more total sellers).
+- US FBA fees are roughly 40-60% higher than AU FBA fees in AUD equivalent.
+- ALL monetary values must be in AUD using conversion rate 1 USD = 1.55 AUD. Never use USD.
+- "investmentEstimate" is MANDATORY — every numeric field must have a real calculated value. Never use null, 0, or omit any field. Base amounts on the Alibaba unit cost × MOQ plus realistic AU FBA launch costs.
+
+Return ONLY this exact JSON structure with real populated values:
+
+{
+  "amazon": {
+    "productName": "specific descriptive product name",
+    "category": "Amazon main category",
+    "subcategory": "specific subcategory",
+    "bsr": "#1,500 – #4,000",
+    "estimatedMonthlySales": 450,
+    "estimatedMonthlyRevenue": 14850,
+    "revenueTrend": "Growing",
+    "seasonalDemand": "Year-round with peak Nov–Jan",
+    "dailySalesEstimate": 15,
+    "priceRangeMin": 29.99,
+    "priceRangeMax": 62.00,
+    "averageMarketPrice": 42.50,
+    "recommendedSellingPrice": 44.99,
+    "competitionLevel": "Medium-Low",
+    "totalCompetitors": 52,
+    "fbaSellerCount": 36,
+    "fbmSellerCount": 16,
+    "brandDominanceScore": "Medium – no single dominant brand",
+    "newSellerOpportunityScore": "7/10 – Good entry window",
+    "topCompetitors": [
+      {"name": "Example Brand Pro Model", "bsr": "#1,800", "price": "$44.99 AUD", "reviews": "2,340", "rating": "4.4"},
+      {"name": "Premium AU Brand Version", "bsr": "#2,500", "price": "$36.99 AUD", "reviews": "1,670", "rating": "4.3"},
+      {"name": "Value Option Generic", "bsr": "#3,900", "price": "$31.00 AUD", "reviews": "890", "rating": "4.1"},
+      {"name": "Imported OEM Version", "bsr": "#4,700", "price": "$27.99 AUD", "reviews": "540", "rating": "3.9"},
+      {"name": "Local AU Seller Brand", "bsr": "#5,200", "price": "$53.49 AUD", "reviews": "320", "rating": "4.6"}
+    ],
+    "fbaFulfillmentFee": 7.75,
+    "fbaStorageFee": 0.43,
+    "referralFee": 5.40,
+    "shippingToWarehouse": 2.94,
+    "profitPerUnit": 11.20,
+    "profitMargin": 25,
+    "breakEvenPrice": 33.79,
+    "roi": 92,
+    "totalReviews": 1100,
+    "averageRating": 4.3,
+    "reviewVelocity": "Moderate – top sellers gaining 20–30 reviews/month",
+    "customerComplaints": ["Durability issues after 6–12 months","Inaccurate sizing descriptions","Packaging inadequate for transit","Instructions unclear or missing"],
+    "customerPraise": ["Excellent value for money","Easy to set up and use","Great modern design","Delivered faster than expected"],
+    "redFlags": ["Top 3 sellers have 1,000+ reviews making initial ranking difficult","Direct Chinese sellers undercut regularly","Potential IP/trademark issues – check brand registry","Seasonal demand spike may cause stockouts"],
+    "topKeywords": ["keyword phrase one","keyword phrase two","keyword phrase three","keyword phrase four","keyword phrase five","keyword phrase six","keyword phrase seven"],
+    "searchVolume": 22000,
+    "keywordCompetition": "Medium-High",
+    "opportunityScore": 7,
+    "demandScore": 8,
+    "competitionScore": 6,
+    "profitabilityScore": 7,
+    "trendScore": 7,
+    "recommendation": "Go for it"
+  },
+  "amazonUS": {
+    "estimatedMonthlySales": 4500,
+    "estimatedMonthlyRevenue": 258075,
+    "dailySalesEstimate": 150,
+    "priceRangeMin": 38.75,
+    "priceRangeMax": 93.00,
+    "averageMarketPrice": 60.45,
+    "recommendedSellingPrice": 57.35,
+    "competitionLevel": "High",
+    "totalCompetitors": 480,
+    "fbaSellerCount": 360,
+    "newSellerOpportunityScore": "5/10 – Competitive but viable with differentiation",
+    "fbaFulfillmentFee": 11.78,
+    "fbaStorageFee": 0.93,
+    "referralFee": 6.88,
+    "shippingToWarehouse": 3.10,
+    "profitPerUnit": 14.52,
+    "profitMargin": 25,
+    "breakEvenPrice": 42.83,
+    "roi": 88,
+    "opportunityScore": 6
+  },
+  "marketComparison": {
+    "recommendedMarket": "Amazon Australia",
+    "whyRecommended": "AU has significantly lower competition (52 vs 320+ sellers) making it easier to rank and build review velocity. Lower initial capital required. Same product, better early-stage opportunity despite lower absolute revenue.",
+    "canSellBoth": "Yes — strongly recommended after 6 months of AU traction",
+    "launchStrategy": "Launch in AU first to build reviews, cash flow, and product iteration with lower risk. After 3–6 months of consistent AU sales, use Amazon Global Selling to expand into US. AU reviews don't transfer but your cash flow funds the US launch budget.",
+    "usAdvantages": ["10x+ larger customer base","Higher absolute monthly revenue potential","Global brand credibility and scale"],
+    "auAdvantages": ["Much lower competition (52 vs 320+ sellers)","Easier to rank and get early reviews","Lower launch budget required ($5K–$10K AUD vs $20K+ for US)","Less price competition from Chinese sellers"]
+  },
+  "alibaba": {
+    "supplierTypes": "Mix of factories (60%) and trading companies (40%)",
+    "yearsInBusiness": "Typical verified suppliers: 4–10 years",
+    "verifiedIndicators": ["Gold Supplier Status","Verified Manufacturer","Trade Assurance Coverage","ISO 9001:2015","SGS Audited"],
+    "unitPriceRangeMin": 5.89,
+    "unitPriceRangeMax": 14.73,
+    "moq": 200,
+    "priceBreaks": [
+      {"qty": "100–499 units", "price": "$13.18 AUD", "savings": "Base price"},
+      {"qty": "500–999 units", "price": "$10.54 AUD", "savings": "20% off"},
+      {"qty": "1,000–2,999 units", "price": "$8.68 AUD", "savings": "34% off"},
+      {"qty": "3,000+ units", "price": "$6.98 AUD", "savings": "47% off"}
+    ],
+    "samplePrice": 46.50,
+    "sampleAvailability": "Yes – most suppliers offer samples within 5–10 days",
+    "paymentTerms": ["T/T 30% deposit, 70% before shipment","Alibaba Trade Assurance","PayPal (samples only)","L/C for large orders (>$15,500 AUD)"],
+    "qualityIndicators": ["CE certification available","RoHS compliant options","Third-party inspection compatible","Factory audit reports available"],
+    "responseRate": "85–95% response within 24 hours",
+    "onTimeDelivery": "90–95% on-time delivery rate",
+    "reorderRateSignals": "High repeat order rate signals reliable quality and strong market demand",
+    "qualityFeedback": "Generally positive with minor QC inconsistencies – pre-shipment inspection recommended",
+    "communicationRating": "Good – most established suppliers have English-speaking staff",
+    "disputeRedFlags": "Low dispute rate among verified Gold Suppliers",
+    "customBranding": "Yes – logo on product and packaging (MOQ 200+)",
+    "customPackaging": "Yes – custom colour box, inserts, hang tags, QR codes",
+    "oemAvail": "Yes – your branding on their proven base product",
+    "odmAvail": "Yes – custom product design (typically MOQ 500+, 45–60 day lead time)",
+    "oemOdmExplain": "For this product category, OEM (Original Equipment Manufacturer) means you apply your brand name, logo, and custom packaging to the supplier's existing proven product design. This is the fastest and lowest-risk route to market — lower MOQ, faster production, and you leverage the manufacturer's existing tooling. ODM (Original Design Manufacturer) means you work with the factory to create a custom product design unique to your brand. ODM makes sense once you've validated demand and want a differentiated product that competitors can't easily copy. Recommendation: Start with OEM to test the market, then invest in ODM customisation once you've generated consistent sales and positive reviews.",
+    "shippingToAustralia": {
+      "sea": {"time": "28–38 days", "costPerUnit": "$1.86 AUD", "recommended": false},
+      "air": {"time": "8–14 days", "costPerUnit": "$6.98 AUD", "recommended": true},
+      "express": {"time": "3–6 days", "costPerUnit": "$15.50 AUD", "recommended": false}
+    },
+    "shippingToUSWarehouse": {
+      "sea": {"time": "20–30 days", "costPerUnit": "$2.17 AUD", "recommended": false},
+      "air": {"time": "7–12 days", "costPerUnit": "$8.36 AUD", "recommended": true},
+      "express": {"time": "3–5 days", "costPerUnit": "$17.05 AUD", "recommended": false}
+    },
+    "landedCostAU": "$18.73 AUD per unit (unit cost + air freight + AU import duties)",
+    "landedCostUS": "$23.14 AUD per unit (unit cost + air freight + US import duties)",
+    "supplierRedFlags": ["Unit prices 50%+ below all other suppliers (likely poor quality)","No Trade Assurance or Gold Supplier status on Alibaba","Refuses to provide samples before bulk order commitment","Cannot provide relevant certificates when requested","Company registered less than 12 months ago","Pushes for 100% upfront payment on first order","Extremely vague about factory location or refuses video call","No transaction history or reviews on Alibaba profile"],
+    "evaluationChecklist": ["Order samples from 3+ different suppliers before committing","Verify Gold Supplier badge and Trade Assurance coverage","Request factory photos and/or Alibaba factory audit report","Check all Alibaba reviews, ratings, and transaction history","Request relevant product certifications (CE, RoHS, REACH etc.)","Negotiate sample price and confirm custom branding capability","Clarify exact packaging dimensions and weight (affects shipping cost)","Confirm production lead time for your initial order quantity","Discuss quality control process and acceptable defect rate","Use Trade Assurance or escrow on all first orders","Get everything agreed in writing before paying deposit","Book pre-shipment inspection via SGS or similar for first order"]
+  },
+  "calculator": {
+    "au": {
+      "defaultUnitPriceAUD": 9.07,
+      "shippingFromChinaPerUnit": 3.41,
+      "importDutiesPerUnit": 0.91,
+      "fbaFulfillmentFee": 7.75,
+      "fbaStorageFee": 0.43,
+      "referralFee": 5.40,
+      "otherCosts": 1.55,
+      "recommendedSellPrice": 44.99,
+      "estimatedMonthlySales": 450
+    },
+    "us": {
+      "defaultUnitPriceAUD": 9.07,
+      "shippingFromChinaPerUnit": 3.41,
+      "importDutiesPerUnit": 1.55,
+      "fbaFulfillmentFee": 11.78,
+      "fbaStorageFee": 0.93,
+      "referralFee": 6.88,
+      "otherCosts": 1.55,
+      "recommendedSellPrice": 57.35,
+      "estimatedMonthlySales": 1800
+    }
+  },
+  "investmentEstimate": {
+    "startupCosts": {
+      "moqProductCostAUD": 5270,
+      "seaFreightToAU": 930,
+      "importDutiesAU": 455,
+      "fbaStorageFirst3Mo": 65,
+      "productPhotography": 350,
+      "amazonSellerFee": 77,
+      "ppcFirstMonth": 775,
+      "sampleCosts": 120,
+      "packagingLabelling": 186,
+      "barcodeFnsku": 31
+    },
+    "scenarios": {
+      "minimum": {
+        "totalAUD": 3800,
+        "details": "Smallest MOQ (100–200 units) at highest unit cost via sea freight. Minimal PPC ($310 AUD), basic listing only. High risk of stockout.",
+        "expectedMonthlyRevenueAUD": 5500,
+        "timeToBreakEven": "5–7 months",
+        "riskLevel": "High"
+      },
+      "recommended": {
+        "totalAUD": 9200,
+        "details": "Optimal MOQ (500 units) at mid-tier unit cost via air freight. Custom packaging, professional photography, 1 month full PPC budget.",
+        "expectedMonthlyRevenueAUD": 14850,
+        "timeToBreakEven": "2–4 months",
+        "riskLevel": "Medium"
+      },
+      "ideal": {
+        "totalAUD": 19500,
+        "details": "Larger MOQ (1,000+ units) at best unit economics via air freight. Premium branding, influencer seeding, 2 months full PPC to accelerate ranking.",
+        "expectedMonthlyRevenueAUD": 22000,
+        "timeToBreakEven": "2–3 months",
+        "riskLevel": "Low"
+      }
+    },
+    "summary": {
+      "minimumToStartAUD": 3800,
+      "recommendedAmountAUD": 9200,
+      "expectedMonthlyProfitAtRecommendedAUD": 3700,
+      "estimatedPaybackMonths": "2–4 months",
+      "overallRisk": "Medium"
+    }
+  },
+  "summary": {
+    "overallVerdict": "Strong Market Opportunity — Recommended to Proceed",
+    "overallVerdictText": "This product category shows healthy demand with a fragmented competitive landscape offering genuine room for a well-differentiated new entrant. Profit margins are attractive and the Alibaba supply chain is mature. Launch in AU first then expand to US.",
+    "topReasons": ["Strong year-round demand with 22,000+ monthly searches and growing trend data","Fragmented AU competition with no single dominant brand holding over 30% market share","Healthy profit margins of 25%+ with clear room to differentiate on quality and packaging"],
+    "topRisks": ["US top competitors have significant review moats requiring an aggressive launch strategy","Direct Chinese sellers regularly list at cost price, compressing margins for generic products","Initial capital requirement is $8,000–$15,000 AUD for first order, fees, and launch advertising"],
+    "subNiches": ["Eco-friendly / sustainable material version","Premium gift set bundle","Kids or youth-specific variant","Sport and outdoor specific model","Personalised/customisable version","Subscription refill model"],
+    "nextSteps": ["Order samples from 3–5 Alibaba suppliers this week","Register an Amazon Australia Seller Central account","Research and file a trademark for your chosen brand name","Commission a professional product photographer","Plan launch PPC budget: minimum $1,240–$2,325 AUD for first 30 days","Order initial inventory of 500–800 units to avoid stockouts during launch","Join 2–3 Amazon FBA Facebook groups for ongoing community support"],
+    "supplierQuestions": ["What is your MOQ for custom logo printing on the product itself?","Can you produce a sample with my exact packaging design before bulk order?","What relevant certifications does this product hold (CE, RoHS, ASTM, etc.)?","What is the exact production lead time for 500 units?","Do you accept Alibaba Trade Assurance for the full order value?","Can we arrange a video call to tour the production facility?","What is your defect rate and how do you handle defective units post-delivery?","Do you have existing Australian or US customers I can contact as references?","What are the exact carton dimensions and gross weight for shipping calculation?","What customisation options are available for MOQ 200 vs MOQ 500?"],
+    "sampleRequestTemplate": "Subject: Sample Request – [Product Name] with Custom Branding\\n\\nHello [Supplier Name],\\n\\nI am an Amazon FBA seller based in Australia and I am evaluating suppliers for [product name]. I found your listing on Alibaba and your products look very promising.\\n\\nI would like to request:\\n• 2–3 samples of your best-selling [product] model\\n• If possible, one sample with a simple logo print to test branding quality\\n• Your full product catalogue and spec sheet\\n\\nOur business requirements:\\n• Initial order: 500 units with custom branding and packaging\\n• Scaling to 1,000–2,000 units per quarter if quality meets our standards\\n• We require Trade Assurance on all orders\\n\\nPlease advise on:\\n1. Sample cost and estimated shipping time to Australia\\n2. MOQ for custom branded orders with your own packaging\\n3. Production lead time for 500 units\\n4. Available colour and customisation options\\n5. Relevant product certifications\\n\\nI am ready to move quickly and place a sample order this week.\\n\\nLooking forward to hearing from you.\\n\\nKind regards,\\n[Your Full Name]\\n[Your Business Name]\\n[Your Email]\\n[Your Phone / WhatsApp]"
+  }
+}`;
+}
+
+// Fill any missing US fields with estimates derived from AU data.
+// This ensures the US column never shows dashes even when Claude omits fields.
+function fillUSDefaults(us, a) {
+  const has = v => v !== null && v !== undefined && v !== 0 && v !== '';
+  // Scale factors: US is ~10x AU in volume; US prices ~28% higher in AUD; US fees ~50% higher; US more competitive
+  const vol  = 10;   // sales volume multiplier
+  const px   = 1.28; // price premium
+  const fees = 1.50; // fee multiplier
+  const comp = 6;    // competitor count multiplier
+
+  return {
+    estimatedMonthlySales:   has(us.estimatedMonthlySales)   ? us.estimatedMonthlySales   : Math.round((a.estimatedMonthlySales  || 0) * vol),
+    estimatedMonthlyRevenue: has(us.estimatedMonthlyRevenue)  ? us.estimatedMonthlyRevenue  : Math.round((a.estimatedMonthlyRevenue || 0) * vol * px),
+    dailySalesEstimate:      has(us.dailySalesEstimate)       ? us.dailySalesEstimate       : Math.round((a.estimatedMonthlySales  || 0) * vol / 30),
+    priceRangeMin:           has(us.priceRangeMin)            ? us.priceRangeMin            : +((a.priceRangeMin            || 0) * px).toFixed(2),
+    priceRangeMax:           has(us.priceRangeMax)            ? us.priceRangeMax            : +((a.priceRangeMax            || 0) * px).toFixed(2),
+    averageMarketPrice:      has(us.averageMarketPrice)       ? us.averageMarketPrice       : +((a.averageMarketPrice       || 0) * px).toFixed(2),
+    recommendedSellingPrice: has(us.recommendedSellingPrice)  ? us.recommendedSellingPrice  : +((a.recommendedSellingPrice  || 0) * px).toFixed(2),
+    breakEvenPrice:          has(us.breakEvenPrice)           ? us.breakEvenPrice           : +((a.breakEvenPrice          || 0) * fees).toFixed(2),
+    competitionLevel:        us.competitionLevel  || 'High',
+    totalCompetitors:        has(us.totalCompetitors)         ? us.totalCompetitors         : Math.round((a.totalCompetitors  || 0) * comp),
+    fbaSellerCount:          has(us.fbaSellerCount)           ? us.fbaSellerCount           : Math.round((a.fbaSellerCount   || 0) * comp),
+    newSellerOpportunityScore: us.newSellerOpportunityScore   || '5/10 – Competitive market, differentiation required',
+    fbaFulfillmentFee:       has(us.fbaFulfillmentFee)        ? us.fbaFulfillmentFee        : +((a.fbaFulfillmentFee  || 0) * fees).toFixed(2),
+    fbaStorageFee:           has(us.fbaStorageFee)            ? us.fbaStorageFee            : +((a.fbaStorageFee      || 0) * 2.2).toFixed(2),
+    referralFee:             has(us.referralFee)              ? us.referralFee              : +((a.referralFee        || 0) * px).toFixed(2),
+    shippingToWarehouse:     has(us.shippingToWarehouse)      ? us.shippingToWarehouse      : +((a.shippingToWarehouse || 0) * 1.1).toFixed(2),
+    profitPerUnit:           has(us.profitPerUnit)            ? us.profitPerUnit            : +((a.profitPerUnit      || 0) * 1.1).toFixed(2),
+    profitMargin:            has(us.profitMargin)             ? us.profitMargin             : Math.max(5, Math.round((a.profitMargin  || 0) * 0.88)),
+    roi:                     has(us.roi)                      ? us.roi                      : Math.max(10, Math.round((a.roi          || 0) * 0.85)),
+    opportunityScore:        has(us.opportunityScore)         ? us.opportunityScore         : Math.max(1, (a.opportunityScore || 5) - 1),
+    // Pass through any extra fields unchanged
+    ...Object.fromEntries(Object.entries(us).filter(([, v]) => has(v)))
+  };
+}
+
+// Compute investment estimate from AU + Alibaba data when Claude doesn't return it.
+// This ensures the investment section never shows dashes.
+function fillInvestmentDefaults(inv, a, al) {
+  const ship = al.shippingToAustralia || {};
+  const sea  = ship.sea || {};
+  const unitMin  = Number(al.unitPriceRangeMin) || (Number(a.recommendedSellingPrice) * 0.18) || 8;
+  const unitMax  = Number(al.unitPriceRangeMax) || unitMin * 1.8;
+  const unitMid  = (unitMin + unitMax) / 2;
+  const moq      = Number(al.moq) || 200;
+  const recMoq   = Math.max(moq, 500);
+  const seaPU    = Number(sea.costPerUnit) || 2.50;
+  const recPrice = Number(a.recommendedSellingPrice) || 45;
+  const monthRev = Number(a.estimatedMonthlyRevenue) || recPrice * (Number(a.estimatedMonthlySales) || 250);
+  const profitPU = Number(a.profitPerUnit) || recPrice * 0.22;
+  const monthSales = Number(a.estimatedMonthlySales) || 250;
+  const monthProfit = profitPU * monthSales;
+
+  // Fill each startup cost item, preferring what Claude returned
+  const raw = inv.startupCosts || {};
+  const moqCost   = raw.moqProductCostAUD   || Math.round(unitMid * recMoq);
+  const freight   = raw.seaFreightToAU      || Math.round(seaPU * recMoq);
+  const duties    = raw.importDutiesAU      || Math.round(moqCost * 0.05);
+  const storage   = raw.fbaStorageFirst3Mo  || Math.round(Math.max(40, (Number(a.fbaStorageFee) || 0.43) * recMoq * 3));
+  const photos    = raw.productPhotography  || 350;
+  const sellerFee = raw.amazonSellerFee     || 77;
+  const ppc       = raw.ppcFirstMonth       || Math.round(Math.max(400, recPrice * 0.25 * Math.min(100, monthSales * 0.12)));
+  const samples   = raw.sampleCosts         || Math.round(Math.min(300, unitMax * 3 + 80));
+  const packaging = raw.packagingLabelling  || Math.round(Math.max(120, moqCost * 0.025));
+  const barcode   = raw.barcodeFnsku        || 50;
+
+  const sc = { moqProductCostAUD: moqCost, seaFreightToAU: freight, importDutiesAU: duties,
+    fbaStorageFirst3Mo: storage, productPhotography: photos, amazonSellerFee: sellerFee,
+    ppcFirstMonth: ppc, sampleCosts: samples, packagingLabelling: packaging, barcodeFnsku: barcode };
+
+  const recCost  = Object.values(sc).reduce((s, v) => s + v, 0);
+  const minCost  = Math.round(unitMax * moq + seaPU * moq + duties * 0.5 + sellerFee + ppc * 0.4 + samples + 31);
+  const idealCost = Math.round(unitMin * recMoq * 2 + seaPU * recMoq * 2 + duties * 2 + photos + sellerFee + ppc * 2 + samples + packaging + barcode);
+
+  const rawS = inv.scenarios || {};
+  const rMin = rawS.minimum     || {};
+  const rRec = rawS.recommended || {};
+  const rIdl = rawS.ideal       || {};
+
+  const minRevEst  = Math.round(monthRev * 0.35);
+  const recRevEst  = Math.round(monthRev);
+  const idealRevEst = Math.round(monthRev * 1.5);
+  const minBreak   = Math.ceil(minCost  / Math.max(1, profitPU * (monthSales * 0.35)));
+  const recBreak   = Math.ceil(recCost  / Math.max(1, monthProfit));
+  const idealBreak = Math.ceil(idealCost / Math.max(1, profitPU * (monthSales * 1.5)));
+
+  const scenarios = {
+    minimum: {
+      totalAUD: rMin.totalAUD || minCost,
+      details: rMin.details || `Smallest MOQ (${moq} units) at highest unit cost via sea freight. Minimal PPC, basic listing. High stockout risk.`,
+      expectedMonthlyRevenueAUD: rMin.expectedMonthlyRevenueAUD || minRevEst,
+      timeToBreakEven: rMin.timeToBreakEven || `${minBreak}–${minBreak + 2} months`,
+      riskLevel: rMin.riskLevel || 'High'
+    },
+    recommended: {
+      totalAUD: rRec.totalAUD || recCost,
+      details: rRec.details || `Optimal MOQ (${recMoq} units) via air freight. Custom packaging, photography, 1 month PPC.`,
+      expectedMonthlyRevenueAUD: rRec.expectedMonthlyRevenueAUD || recRevEst,
+      timeToBreakEven: rRec.timeToBreakEven || `${recBreak}–${recBreak + 2} months`,
+      riskLevel: rRec.riskLevel || 'Medium'
+    },
+    ideal: {
+      totalAUD: rIdl.totalAUD || idealCost,
+      details: rIdl.details || `Larger MOQ (${recMoq * 2}+ units) at best unit economics via air freight. Premium branding, 2 months full PPC.`,
+      expectedMonthlyRevenueAUD: rIdl.expectedMonthlyRevenueAUD || idealRevEst,
+      timeToBreakEven: rIdl.timeToBreakEven || `${idealBreak}–${idealBreak + 1} months`,
+      riskLevel: rIdl.riskLevel || 'Low'
+    }
+  };
+
+  const rawSum = inv.summary || {};
+  const summary = {
+    minimumToStartAUD: rawSum.minimumToStartAUD || minCost,
+    recommendedAmountAUD: rawSum.recommendedAmountAUD || recCost,
+    expectedMonthlyProfitAtRecommendedAUD: rawSum.expectedMonthlyProfitAtRecommendedAUD || Math.round(monthProfit),
+    estimatedPaybackMonths: rawSum.estimatedPaybackMonths || `${recBreak}–${recBreak + 2} months`,
+    overallRisk: rawSum.overallRisk || 'Medium'
+  };
+
+  return { startupCosts: sc, scenarios, summary };
+}
+
+// ─── Render ────────────────────────────────────────────────────────────────
+function render(d) {
+  const a = d.amazon, mc = d.marketComparison || {}, al = d.alibaba, c = d.calculator || {}, s = d.summary;
+  const us = fillUSDefaults(d.amazonUS || {}, a);
+
+  // Overview header
+  set('pName', a.productName || '—');
+  set('pMeta', `${a.category || '—'} · ${a.subcategory || '—'}`);
+
+  const rb = document.getElementById('recBadge');
+  rb.textContent = a.recommendation || '—';
+  rb.className = 'rec-badge';
+  const rec = (a.recommendation || '').toLowerCase();
+  rb.classList.add(rec.includes('go') || rec.includes('pursue') ? 'rec-go' : rec.includes('avoid') || rec.includes('no') ? 'rec-avoid' : 'rec-caution');
+
+  set('v-overall', a.opportunityScore ?? '—');
+  set('v-demand',  a.demandScore ?? '—');
+  set('v-comp',    a.competitionScore ?? '—');
+  set('v-profit',  a.profitabilityScore ?? '—');
+  set('v-trend',   a.trendScore ?? '—');
+  set('v-opp',     a.opportunityScore ?? '—');
+
+  // Amazon AU
+  set('a-rev',    aud(a.estimatedMonthlyRevenue));
+  set('a-sales',  num(a.estimatedMonthlySales) + ' units');
+  set('a-daily',  '~' + (a.dailySalesEstimate || '—') + ' units/day');
+  set('a-trend',  a.revenueTrend || '—');
+  set('a-season', a.seasonalDemand || '—');
+  set('a-prange', aud(a.priceRangeMin) + ' – ' + aud(a.priceRangeMax));
+  set('a-avgp',   aud(a.averageMarketPrice));
+  set('a-recp',   aud(a.recommendedSellingPrice));
+  set('a-bep',    aud(a.breakEvenPrice));
+  set('a-be2',    aud(a.breakEvenPrice));
+  set('a-bsr',    a.bsr || '—');
+  set('a-cat',    a.category || '—');
+  set('a-sub',    a.subcategory || '—');
+  set('a-pu',     aud(a.profitPerUnit));
+  set('a-pm',     (a.profitMargin || 0) + '%');
+  set('a-roi',    (a.roi || 0) + '%');
+  set('a-tc',     num(a.totalCompetitors));
+  set('a-fba',    num(a.fbaSellerCount));
+  set('a-fbm',    num(a.fbmSellerCount));
+  set('a-bd',     a.brandDominanceScore || '—');
+  set('a-nso',    a.newSellerOpportunityScore || '—');
+  set('a-comp',   a.competitionLevel || '—');
+  set('a-rc',     num(a.totalReviews));
+  set('a-rat',    (a.averageRating || 0) + ' ★');
+  set('a-rv',     a.reviewVelocity || '—');
+  set('a-sv',     num(a.searchVolume) + ' / mo');
+  set('a-kc',     a.keywordCompetition || '—');
+  set('a-ff',     aud(a.fbaFulfillmentFee));
+  set('a-sf',     aud(a.fbaStorageFee) + ' / mo');
+  set('a-rf',     aud(a.referralFee));
+  set('a-sw',     aud(a.shippingToWarehouse));
+  set('au-opp',   a.opportunityScore ?? '—');
+
+  tags('a-kws', a.topKeywords || [], 'ta');
+  table('a-compTbl', a.topCompetitors || [], ['name','bsr','price','reviews','rating']);
+  list('a-praise',     a.customerPraise);
+  list('a-complaints', a.customerComplaints);
+  list('a-redflags',   a.redFlags);
+
+  // Amazon US (all fields guaranteed non-null by fillUSDefaults)
+  set('us-rev',   aud(us.estimatedMonthlyRevenue));
+  set('us-sales', num(us.estimatedMonthlySales) + ' units');
+  set('us-daily', '~' + (us.dailySalesEstimate || Math.round((us.estimatedMonthlySales || 0) / 30)) + ' units/day');
+  set('us-prange',aud(us.priceRangeMin) + ' – ' + aud(us.priceRangeMax));
+  set('us-avgp',  aud(us.averageMarketPrice));
+  set('us-recp',  aud(us.recommendedSellingPrice));
+  set('us-bep',   aud(us.breakEvenPrice));
+  set('us-be',    aud(us.breakEvenPrice));
+  set('us-comp',  us.competitionLevel || '—');
+  set('us-tc',    num(us.totalCompetitors));
+  set('us-fba',   num(us.fbaSellerCount));
+  set('us-nso',   us.newSellerOpportunityScore || '—');
+  set('us-ff',    aud(us.fbaFulfillmentFee));
+  set('us-sf',    aud(us.fbaStorageFee) + ' / mo');
+  set('us-rf',    aud(us.referralFee));
+  set('us-sw',    aud(us.shippingToWarehouse));
+  set('us-pu',    aud(us.profitPerUnit));
+  set('us-pm',    (us.profitMargin || 0) + '%');
+  set('us-roi',   (us.roi || 0) + '%');
+  set('us-opp',   us.opportunityScore ?? '—');
+
+  // Market comparison
+  set('mc-recommended', mc.recommendedMarket || '—');
+  set('mc-both',        mc.canSellBoth || '—');
+  set('mc-why',         mc.whyRecommended || '—');
+  set('mc-strategy',    mc.launchStrategy || '—');
+  list('mc-us-adv', mc.usAdvantages);
+  list('mc-au-adv', mc.auAdvantages);
+
+  // Alibaba
+  set('al-st',  al.supplierTypes || '—');
+  set('al-yib', al.yearsInBusiness || '—');
+  set('al-rr',  al.responseRate || '—');
+  set('al-otd', al.onTimeDelivery || '—');
+  set('al-ror', al.reorderRateSignals || '—');
+  set('al-upr', '$' + (al.unitPriceRangeMin||0).toFixed(2) + ' – $' + (al.unitPriceRangeMax||0).toFixed(2) + ' AUD');
+  set('al-moq', num(al.moq) + ' units');
+  set('al-sp',  '$' + (al.samplePrice||0).toFixed(2) + ' AUD');
+  set('al-sa',  al.sampleAvailability || 'Available');
+  set('al-cb',  al.customBranding || '—');
+  set('al-cp',  al.customPackaging || '—');
+  set('al-oem', al.oemAvail || '—');
+  set('al-odm', al.odmAvail || '—');
+  set('al-qf',  al.qualityFeedback || '—');
+  set('al-cr',  al.communicationRating || '—');
+  set('al-dh',  al.disputeRedFlags || '—');
+
+  tags('al-qi', al.qualityIndicators || [], 'tg');
+  tags('al-pt', al.paymentTerms || [], 'ty');
+  tags('al-vi', al.verifiedIndicators || [], 'ta');
+  document.getElementById('al-oemodm').textContent = al.oemOdmExplain || '—';
+  table('al-pbTbl', al.priceBreaks || [], ['qty','price','savings']);
+
+  // Shipping — AU (support both old shippingMethods and new shippingToAustralia)
+  const smAU = al.shippingToAustralia || al.shippingMethods || {};
+  set('sh-seaT', smAU.sea?.time || '—');
+  set('sh-seaC', smAU.sea?.costPerUnit || '—');
+  set('sh-airT', smAU.air?.time || '—');
+  set('sh-airC', smAU.air?.costPerUnit || '—');
+  set('sh-expT', smAU.express?.time || '—');
+  set('sh-expC', smAU.express?.costPerUnit || '—');
+  set('al-recship', al.recommendedShipping || (smAU.air?.recommended ? 'Air Freight (recommended)' : '—'));
+  set('al-landed-au', al.landedCostAU || '—');
+
+  ['sea','air','exp'].forEach(k => document.getElementById('sc-'+k)?.classList.remove('rec'));
+  if (smAU.sea?.recommended) document.getElementById('sc-sea')?.classList.add('rec');
+  if (smAU.air?.recommended) document.getElementById('sc-air')?.classList.add('rec');
+  if (smAU.express?.recommended) document.getElementById('sc-exp')?.classList.add('rec');
+
+  // Shipping — US warehouse
+  const smUS = al.shippingToUSWarehouse || {};
+  set('sh-us-seaT', smUS.sea?.time || '—');
+  set('sh-us-seaC', smUS.sea?.costPerUnit || '—');
+  set('sh-us-airT', smUS.air?.time || '—');
+  set('sh-us-airC', smUS.air?.costPerUnit || '—');
+  set('sh-us-expT', smUS.express?.time || '—');
+  set('sh-us-expC', smUS.express?.costPerUnit || '—');
+  set('al-recship-us', smUS.air?.recommended ? 'Air Freight (recommended)' : (smUS.sea?.recommended ? 'Sea Freight (recommended)' : '—'));
+  set('al-landed-us', al.landedCostUS || '—');
+
+  ['sea','air','exp'].forEach(k => document.getElementById('sc-us-'+k)?.classList.remove('rec'));
+  if (smUS.sea?.recommended) document.getElementById('sc-us-sea')?.classList.add('rec');
+  if (smUS.air?.recommended) document.getElementById('sc-us-air')?.classList.add('rec');
+  if (smUS.express?.recommended) document.getElementById('sc-us-exp')?.classList.add('rec');
+
+  list('al-rf', al.supplierRedFlags);
+  checklist('al-checklist', al.evaluationChecklist || []);
+
+  // Calculator defaults — support both new (c.au/c.us) and old format
+  const cau = c.au || {};
+  const cus = c.us || {};
+  aiDefaults = {
+    unit:      cau.defaultUnitPriceAUD || ((c.defaultUnitPriceUSD || 0) * 1.55),
+    ship_au:   cau.shippingFromChinaPerUnit || c.shippingFromChinaPerUnit || 0,
+    duty_au:   cau.importDutiesPerUnit || c.importDutiesPerUnit || 0,
+    fbaf_au:   cau.fbaFulfillmentFee || c.fbaFulfillmentFee || 0,
+    stor_au:   cau.fbaStorageFee || c.fbaStorageFee || 0,
+    ref_au:    cau.referralFee || c.referralFee || 0,
+    sell_au:   cau.recommendedSellPrice || a.recommendedSellingPrice || 0,
+    units_au:  cau.estimatedMonthlySales || a.estimatedMonthlySales || 0,
+    ship_us:   cus.shippingFromChinaPerUnit || c.shippingFromChinaPerUnit || 0,
+    duty_us:   cus.importDutiesPerUnit || 0,
+    fbaf_us:   cus.fbaFulfillmentFee || 0,
+    stor_us:   cus.fbaStorageFee || 0,
+    ref_us:    cus.referralFee || 0,
+    sell_us:   cus.recommendedSellPrice || 0,
+    units_us:  cus.estimatedMonthlySales || 0,
+    other:     cau.otherCosts || cus.otherCosts || c.otherCosts || 1.55,
+    fx:        1.55
+  };
+
+  document.getElementById('aiHint').innerHTML =
+    `AU: Unit <strong>$${aiDefaults.unit.toFixed(2)}</strong> · Ship <strong>$${aiDefaults.ship_au.toFixed(2)}</strong> · FBA <strong>$${aiDefaults.fbaf_au.toFixed(2)}</strong> · Sell <strong>$${aiDefaults.sell_au.toFixed(2)}</strong> · ${aiDefaults.units_au} units/mo<br>` +
+    `US: Ship <strong>$${aiDefaults.ship_us.toFixed(2)}</strong> · FBA <strong>$${aiDefaults.fbaf_us.toFixed(2)}</strong> · Sell <strong>$${aiDefaults.sell_us.toFixed(2)}</strong> · ${aiDefaults.units_us} units/mo`;
+
+  // Summary
+  set('s-verdict',    s.overallVerdict || '—');
+  set('s-verdictTxt', s.overallVerdictText || '—');
+  list('s-reasons',   s.topReasons);
+  list('s-risks',     s.topRisks);
+  tags('s-niches', s.subNiches || [], 'ta');
+  list('s-steps',     s.nextSteps);
+  list('s-questions', s.supplierQuestions);
+  document.getElementById('s-template').textContent = (s.sampleRequestTemplate || '').replace(/\\n/g, '\n');
+
+  // Investment estimate — always computed, never shows dashes
+  const { startupCosts: sc, scenarios: { minimum: invMin, recommended: invRec, ideal: invIdl }, summary: invSum }
+    = fillInvestmentDefaults(d.investmentEstimate || {}, a, al);
+
+  const invAUD = v => '$' + Number(v).toLocaleString('en-AU', {maximumFractionDigits:0}) + ' AUD';
+  const scTotal = Object.values(sc).reduce((sum, v) => sum + (Number(v) || 0), 0);
+
+  set('inv-moq-cost',      aud(sc.moqProductCostAUD));
+  set('inv-sea-freight',   aud(sc.seaFreightToAU));
+  set('inv-import-duties', aud(sc.importDutiesAU));
+  set('inv-storage-3mo',   aud(sc.fbaStorageFirst3Mo));
+  set('inv-photography',   aud(sc.productPhotography));
+  set('inv-seller-fee',    aud(sc.amazonSellerFee));
+  set('inv-ppc',           aud(sc.ppcFirstMonth));
+  set('inv-samples',       aud(sc.sampleCosts));
+  set('inv-packaging',     aud(sc.packagingLabelling));
+  set('inv-barcode',       aud(sc.barcodeFnsku));
+  set('inv-total-costs',   aud(scTotal));
+
+  set('inv-min-total',   invAUD(invMin.totalAUD));
+  set('inv-min-details', invMin.details);
+  set('inv-min-rev',     invAUD(invMin.expectedMonthlyRevenueAUD));
+  set('inv-min-bre',     invMin.timeToBreakEven);
+  set('inv-min-risk',    invMin.riskLevel);
+
+  set('inv-rec-total',   invAUD(invRec.totalAUD));
+  set('inv-rec-details', invRec.details);
+  set('inv-rec-rev',     invAUD(invRec.expectedMonthlyRevenueAUD));
+  set('inv-rec-bre',     invRec.timeToBreakEven);
+  set('inv-rec-risk',    invRec.riskLevel);
+
+  set('inv-ideal-total',   invAUD(invIdl.totalAUD));
+  set('inv-ideal-details', invIdl.details);
+  set('inv-ideal-rev',     invAUD(invIdl.expectedMonthlyRevenueAUD));
+  set('inv-ideal-bre',     invIdl.timeToBreakEven);
+  set('inv-ideal-risk',    invIdl.riskLevel);
+
+  set('inv-sum-min',     invAUD(invSum.minimumToStartAUD));
+  set('inv-sum-rec',     invAUD(invSum.recommendedAmountAUD));
+  set('inv-sum-profit',  invAUD(invSum.expectedMonthlyProfitAtRecommendedAUD));
+  set('inv-sum-payback', invSum.estimatedPaybackMonths);
+
+  const riskEl = document.getElementById('inv-sum-risk');
+  if (riskEl) {
+    const risk = invSum.overallRisk;
+    riskEl.textContent = risk;
+    riskEl.className = 'inv-sum-val ' +
+      (risk === 'Low' ? 'inv-risk-low' : risk === 'High' ? 'inv-risk-high' : 'inv-risk-med');
+  }
+}
+
+// ─── Score rings ───────────────────────────────────────────────────────────
+function animateRings(a) {
+  const C = 2 * Math.PI * 34; // r=34
+  const pairs = [
+    ['r-overall', a.opportunityScore],
+    ['r-demand',  a.demandScore],
+    ['r-comp',    a.competitionScore],
+    ['r-profit',  a.profitabilityScore],
+    ['r-trend',   a.trendScore],
+    ['r-opp',     a.opportunityScore]
+  ];
+  pairs.forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const pct = Math.max(0, Math.min(10, val || 0)) / 10;
+    el.style.strokeDasharray = C;
+    el.style.strokeDashoffset = C;
+    requestAnimationFrame(() => setTimeout(() => { el.style.strokeDashoffset = C - pct * C; }, 80));
+  });
+}
+
+// ─── Calculator ────────────────────────────────────────────────────────────
+function recalc() {
+  const unit    = parseFloat(document.getElementById('ci-unit').value)     || 0;
+  const oth     = parseFloat(document.getElementById('ci-other').value)    || 0;
+
+  // AU
+  const ship_au = parseFloat(document.getElementById('ci-ship-au').value)  || 0;
+  const duty_au = parseFloat(document.getElementById('ci-duty-au').value)  || 0;
+  const fbaf_au = parseFloat(document.getElementById('ci-fbaf-au').value)  || 0;
+  const stor_au = parseFloat(document.getElementById('ci-stor-au').value)  || 0;
+  const ref_au  = parseFloat(document.getElementById('ci-ref-au').value)   || 0;
+  const sell_au = parseFloat(document.getElementById('ci-sell-au').value)  || 0;
+  const mo_au   = parseFloat(document.getElementById('ci-units-au').value) || 0;
+
+  // US
+  const ship_us = parseFloat(document.getElementById('ci-ship-us').value)  || 0;
+  const duty_us = parseFloat(document.getElementById('ci-duty-us').value)  || 0;
+  const fbaf_us = parseFloat(document.getElementById('ci-fbaf-us').value)  || 0;
+  const stor_us = parseFloat(document.getElementById('ci-stor-us').value)  || 0;
+  const ref_us  = parseFloat(document.getElementById('ci-ref-us').value)   || 0;
+  const sell_us = parseFloat(document.getElementById('ci-sell-us').value)  || 0;
+  const mo_us   = parseFloat(document.getElementById('ci-units-us').value) || 0;
+
+  // AU calcs
+  const cost_au   = unit + ship_au + duty_au + fbaf_au + stor_au + ref_au + oth;
+  const prof_au   = sell_au - cost_au;
+  const marg_au   = sell_au > 0 ? prof_au / sell_au * 100 : 0;
+  const roi_au    = cost_au > 0 ? prof_au / cost_au * 100 : 0;
+  const mprof_au  = prof_au * mo_au;
+
+  // US calcs
+  const cost_us   = unit + ship_us + duty_us + fbaf_us + stor_us + ref_us + oth;
+  const prof_us   = sell_us - cost_us;
+  const marg_us   = sell_us > 0 ? prof_us / sell_us * 100 : 0;
+  const roi_us    = cost_us > 0 ? prof_us / cost_us * 100 : 0;
+  const mprof_us  = prof_us * mo_us;
+
+  const fmt = v => '$' + v.toFixed(2) + ' AUD';
+  const neg = v => '-$' + v.toFixed(2);
+
+  // AU output
+  set('cr-unit-au',    fmt(unit));
+  set('cr-ship-au',    neg(ship_au));
+  set('cr-duty-au',    neg(duty_au));
+  set('cr-fbaf-au',    neg(fbaf_au));
+  set('cr-stor-au',    neg(stor_au));
+  set('cr-ref-au',     neg(ref_au));
+  set('cr-other-au',   neg(oth));
+  set('cr-total-au',   neg(cost_au));
+  set('cr-sell-au',    fmt(sell_au));
+
+  const pe_au = document.getElementById('cr-profit-au');
+  if (pe_au) { pe_au.textContent = fmt(prof_au); pe_au.style.color = prof_au >= 0 ? 'var(--green)' : 'var(--red)'; }
+  const me_au = document.getElementById('cr-margin-au');
+  if (me_au) { me_au.textContent = marg_au.toFixed(1) + '%'; me_au.style.color = marg_au >= 20 ? 'var(--green)' : marg_au >= 10 ? 'var(--yellow)' : 'var(--red)'; }
+  const re_au = document.getElementById('cr-roi-au');
+  if (re_au) { re_au.textContent = roi_au.toFixed(1) + '%'; re_au.style.color = roi_au >= 50 ? 'var(--green)' : roi_au >= 25 ? 'var(--yellow)' : 'var(--red)'; }
+  const mp_au = document.getElementById('cr-mprofit-au');
+  if (mp_au) { mp_au.textContent = fmt(mprof_au); mp_au.style.color = mprof_au >= 0 ? 'var(--green)' : 'var(--red)'; }
+
+  // US output
+  set('cr-unit-us',    fmt(unit));
+  set('cr-ship-us',    neg(ship_us));
+  set('cr-duty-us',    neg(duty_us));
+  set('cr-fbaf-us',    neg(fbaf_us));
+  set('cr-stor-us',    neg(stor_us));
+  set('cr-ref-us',     neg(ref_us));
+  set('cr-other-us',   neg(oth));
+  set('cr-total-us',   neg(cost_us));
+  set('cr-sell-us',    fmt(sell_us));
+
+  const pe_us = document.getElementById('cr-profit-us');
+  if (pe_us) { pe_us.textContent = fmt(prof_us); pe_us.style.color = prof_us >= 0 ? 'var(--green)' : 'var(--red)'; }
+  const me_us = document.getElementById('cr-margin-us');
+  if (me_us) { me_us.textContent = marg_us.toFixed(1) + '%'; me_us.style.color = marg_us >= 20 ? 'var(--green)' : marg_us >= 10 ? 'var(--yellow)' : 'var(--red)'; }
+  const re_us = document.getElementById('cr-roi-us');
+  if (re_us) { re_us.textContent = roi_us.toFixed(1) + '%'; re_us.style.color = roi_us >= 50 ? 'var(--green)' : roi_us >= 25 ? 'var(--yellow)' : 'var(--red)'; }
+  const mp_us = document.getElementById('cr-mprofit-us');
+  if (mp_us) { mp_us.textContent = fmt(mprof_us); mp_us.style.color = mprof_us >= 0 ? 'var(--green)' : 'var(--red)'; }
+
+  // Verdict AU
+  const vAU = document.getElementById('calcVerdictAU');
+  if (vAU) {
+    vAU.style.display = 'block';
+    if (marg_au >= 25 && roi_au >= 50) {
+      vAU.style.cssText = 'display:block;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#34d399;margin-top:10px;padding:10px;border-radius:8px;font-size:13px;font-weight:700;text-align:center';
+      vAU.textContent = `✅ AU: Excellent — ${marg_au.toFixed(1)}% margin`;
+    } else if (marg_au >= 15) {
+      vAU.style.cssText = 'display:block;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#fcd34d;margin-top:10px;padding:10px;border-radius:8px;font-size:13px;font-weight:700;text-align:center';
+      vAU.textContent = `⚠️ AU: Acceptable — ${marg_au.toFixed(1)}% margin`;
+    } else if (sell_au > 0) {
+      vAU.style.cssText = 'display:block;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;margin-top:10px;padding:10px;border-radius:8px;font-size:13px;font-weight:700;text-align:center';
+      vAU.textContent = `❌ AU: Low margins — ${marg_au.toFixed(1)}%`;
+    }
+  }
+
+  // Verdict US
+  const vUS = document.getElementById('calcVerdictUS');
+  if (vUS) {
+    vUS.style.display = 'block';
+    if (marg_us >= 25 && roi_us >= 50) {
+      vUS.style.cssText = 'display:block;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#34d399;margin-top:10px;padding:10px;border-radius:8px;font-size:13px;font-weight:700;text-align:center';
+      vUS.textContent = `✅ US: Excellent — ${marg_us.toFixed(1)}% margin`;
+    } else if (marg_us >= 15) {
+      vUS.style.cssText = 'display:block;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#fcd34d;margin-top:10px;padding:10px;border-radius:8px;font-size:13px;font-weight:700;text-align:center';
+      vUS.textContent = `⚠️ US: Acceptable — ${marg_us.toFixed(1)}% margin`;
+    } else if (sell_us > 0) {
+      vUS.style.cssText = 'display:block;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;margin-top:10px;padding:10px;border-radius:8px;font-size:13px;font-weight:700;text-align:center';
+      vUS.textContent = `❌ US: Low margins — ${marg_us.toFixed(1)}%`;
+    }
+  }
+
+  // Combined comparison verdict
+  const vTxt = document.getElementById('calcVerdictText');
+  if (vTxt && (sell_au > 0 || sell_us > 0)) {
+    if (sell_au > 0 && sell_us > 0) {
+      const better = marg_au >= marg_us ? '🇦🇺 Amazon AU' : '🇺🇸 Amazon US';
+      vTxt.textContent = `${better} offers the better margin (${Math.max(marg_au, marg_us).toFixed(1)}% vs ${Math.min(marg_au, marg_us).toFixed(1)}%). Monthly profit: AU $${mprof_au.toFixed(2)} AUD · US $${mprof_us.toFixed(2)} AUD.`;
+    } else if (sell_au > 0) {
+      vTxt.textContent = `AU market: ${marg_au.toFixed(1)}% margin · $${prof_au.toFixed(2)} AUD per unit · $${mprof_au.toFixed(2)} AUD/mo at ${mo_au} units.`;
+    } else {
+      vTxt.textContent = `US market: ${marg_us.toFixed(1)}% margin · $${prof_us.toFixed(2)} AUD per unit · $${mprof_us.toFixed(2)} AUD/mo at ${mo_us} units.`;
+    }
+  }
+}
+
+function fillAI() {
+  document.getElementById('ci-unit').value     = aiDefaults.unit    || '';
+  document.getElementById('ci-other').value    = aiDefaults.other   || '';
+  document.getElementById('ci-ship-au').value  = aiDefaults.ship_au || '';
+  document.getElementById('ci-duty-au').value  = aiDefaults.duty_au || '';
+  document.getElementById('ci-fbaf-au').value  = aiDefaults.fbaf_au || '';
+  document.getElementById('ci-stor-au').value  = aiDefaults.stor_au || '';
+  document.getElementById('ci-ref-au').value   = aiDefaults.ref_au  || '';
+  document.getElementById('ci-sell-au').value  = aiDefaults.sell_au || '';
+  document.getElementById('ci-units-au').value = aiDefaults.units_au || '';
+  document.getElementById('ci-ship-us').value  = aiDefaults.ship_us || '';
+  document.getElementById('ci-duty-us').value  = aiDefaults.duty_us || '';
+  document.getElementById('ci-fbaf-us').value  = aiDefaults.fbaf_us || '';
+  document.getElementById('ci-stor-us').value  = aiDefaults.stor_us || '';
+  document.getElementById('ci-ref-us').value   = aiDefaults.ref_us  || '';
+  document.getElementById('ci-sell-us').value  = aiDefaults.sell_us || '';
+  document.getElementById('ci-units-us').value = aiDefaults.units_us || '';
+  recalc();
+}
+
+// ─── Tabs ──────────────────────────────────────────────────────────────────
+// mainTab() is called by the top nav bar (always visible)
+function mainTab(name, btn) {
+  // Update top nav button states
+  document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+
+  if (name === 'trending') {
+    // Show trending page, hide research results
+    document.getElementById('resDiv').classList.remove('on');
+    document.getElementById('trendingPage').style.display = 'block';
+    if (!document.getElementById('catGrid').children.length) initTrendCategories();
+    updateUsageBar();
+    return;
+  }
+
+  // Research tab: hide trending, switch tab-pane, show results if data exists
+  document.getElementById('trendingPage').style.display = '';
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('on'));
+  document.getElementById('tp-' + name).classList.add('on');
+  if (aiData) showResults();
+}
+
+// Legacy tab() kept for any inline calls already in the HTML
+function tab(name, btn) { mainTab(name, btn); }
+
+// ─── Checklist ────────────────────────────────────────────────────────────
+function checklist(id, items) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = items.map((txt, i) =>
+    `<div class="chkitem"><div class="chkbox" onclick="toggleChk(this)" id="chk${i}"></div><span class="chktxt">${txt}</span></div>`
+  ).join('');
+}
+function toggleChk(el) {
+  el.classList.toggle('on');
+  el.textContent = el.classList.contains('on') ? '✓' : '';
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+function set(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val !== undefined && val !== null ? val : '—';
+}
+function setText(id, val) { set(id, val); }
+
+function list(id, arr) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = (arr || []).map(x => `<li>${x}</li>`).join('');
+}
+
+function tags(id, arr, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = (arr || []).map(x => `<span class="tag ${cls||''}">${x}</span>`).join('');
+}
+
+function table(id, arr, cols) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = arr.map(row =>
+    '<tr>' + cols.map(c => `<td>${row[c] || '—'}</td>`).join('') + '</tr>'
+  ).join('');
+}
+
+function aud(v) { return v !== undefined && v !== null ? '$' + Number(v).toFixed(2) : '—'; }
+function num(v) { return v !== undefined && v !== null ? Number(v).toLocaleString() : '—'; }
+
+function showLoad() {
+  document.getElementById('loadDiv').classList.add('on');
+  document.getElementById('goBtn').disabled = true;
+}
+function hideLoad() {
+  document.getElementById('loadDiv').classList.remove('on');
+  document.getElementById('goBtn').disabled = false;
+}
+function showResults() {
+  // Hide trending page, activate first research tab in top nav if trending was active
+  document.getElementById('trendingPage').style.display = '';
+  const activeMainTab = document.querySelector('.main-tab.on');
+  if (!activeMainTab || activeMainTab.id === 'mainTab-trending') {
+    document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('on'));
+    document.getElementById('mainTab-amazon').classList.add('on');
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('on'));
+    document.getElementById('tp-amazon').classList.add('on');
+  }
+  document.getElementById('resDiv').classList.add('on');
+  document.getElementById('resDiv').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function hideResults() { document.getElementById('resDiv').classList.remove('on'); }
+function showErr(msg) {
+  document.getElementById('errMsg').textContent = msg;
+  document.getElementById('errBox').classList.add('on');
+  document.getElementById('errBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function clearErr() { document.getElementById('errBox').classList.remove('on'); }
+
+(function restoreLastSearchFromLocalStorage() {
+  const saved = loadLastSearchFromLocalStorage();
+  if (!saved) return;
+  currentKeyword = saved.keyword;
+  aiData = saved.data;
+  document.getElementById('kw').value = saved.keyword;
+  clearErr();
+  render(saved.data);
+  showResults();
+  animateRings(saved.data.amazon);
+})();
+
+// ─── Sidebar — Firestore backend ───────────────────────────────────────────
+// In-memory caches kept fresh by real-time onSnapshot listeners.
+// All writes go to Firestore; reads come from the local cache (instant).
+let historyCache     = [];  // [{id, keyword, productName, firstSearched, data}]
+let comparisonsCache = [];  // [{id, pAId, pBId, pAName, pBName, dateCreated}]
+let initialLoadDone  = false;
+
+// Convert Firestore Timestamp, Date, or ISO string → JS Date
+function tsToDate(ts) {
+  if (!ts) return new Date();
+  if (typeof ts.toDate === 'function') return ts.toDate();
+  return new Date(ts);
+}
+
+// Wrappers so the rest of the code reads from the local cache synchronously
+function getHistory()     { return historyCache; }
+function getComparisons() { return comparisonsCache; }
+
+// Firestore: save or update a search (normalized keyword = doc ID → no dupes)
+async function addToHistory(keyword, data) {
+  const docId = keyword.toLowerCase().trim().replace(/\s+/g, '_');
+  const docRef = db.collection('searches').doc(docId);
+  try {
+    const snap = await docRef.get();
+    if (snap.exists) {
+      // Keyword already known — update data but NEVER touch firstSearched
+      await docRef.update({
+        data,
+        productName: data.amazon?.productName || keyword,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      // Brand new keyword
+      await docRef.set({
+        keyword,
+        productName: data.amazon?.productName || keyword,
+        firstSearched: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt:     firebase.firestore.FieldValue.serverTimestamp(),
+        data
+      });
+    }
+  } catch (e) {
+    console.error('Firestore write error:', e);
+  }
+}
+
+function refreshSidebar() {
+  renderHistory();
+  renderRankings();
+  populateCompareSelects();
+}
+
+// ── Real-time listeners ────────────────────────────────────────────────────
+db.collection('searches')
+  .orderBy('firstSearched', 'desc')
+  .onSnapshot(snapshot => {
+    historyCache = snapshot.docs.map(doc => {
+      const d = doc.data();
+      return {
+        id:           doc.id,
+        keyword:      d.keyword      || doc.id.replace(/_/g, ' '),
+        productName:  d.productName  || d.keyword || doc.id,
+        firstSearched: tsToDate(d.firstSearched).toISOString(),
+        data:         d.data
+      };
+    });
+    refreshSidebar();
+    // On very first load: restore the most recent search result (zero API calls)
+    if (!initialLoadDone) {
+      initialLoadDone = true;
+      if (historyCache.length) {
+        const last = historyCache[0];
+        currentKeyword = last.keyword;
+        document.getElementById('kw').value = last.keyword;
+        render(last.data);
+        showResults();
+        animateRings(last.data.amazon);
+      }
+    }
+  }, err => console.error('Firestore searches listener error:', err));
+
+db.collection('comparisons')
+  .orderBy('dateCreated', 'desc')
+  .onSnapshot(snapshot => {
+    comparisonsCache = snapshot.docs.map(doc => {
+      const d = doc.data();
+      return {
+        id:          doc.id,
+        pAId:        d.pAId,
+        pBId:        d.pBId,
+        pAName:      d.pAName,
+        pBName:      d.pBName,
+        dateCreated: tsToDate(d.dateCreated).toISOString()
+      };
+    });
+    renderSavedComparisons();
+    populateCompareSelects();
+  }, err => console.error('Firestore comparisons listener error:', err));
+
+function toggleSidebar() {
+  const sb   = document.getElementById('sidebar');
+  const ov   = document.getElementById('sbOverlay');
+  const btn  = document.getElementById('sbToggle');
+  const open = sb.classList.toggle('open');
+  ov.classList.toggle('on', open);
+  btn.textContent = open ? '✕' : '☰';
+}
+
+function sbTab(name, btn) {
+  document.querySelectorAll('.sb-pane').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.sb-tab').forEach(b => b.classList.remove('on'));
+  document.getElementById('sb-' + name).classList.add('on');
+  btn.classList.add('on');
+}
+
+// ── History ────────────────────────────────────────────────────────────────
+function renderHistory() {
+  const hist = getHistory();
+  const el   = document.getElementById('sb-hist-list');
+  if (!el) return;
+  if (!hist.length) {
+    el.innerHTML = '<div class="sb-empty">No searches yet.<br>Search a product keyword to get started.</div>';
+    return;
+  }
+  el.innerHTML = hist.map(item => {
+    const score  = item.data?.amazon?.opportunityScore ?? '—';
+    const scoreC = typeof score === 'number' ? (score >= 7 ? 'var(--green)' : score >= 5 ? 'var(--yellow)' : 'var(--red)') : 'var(--t3)';
+    const d      = new Date(item.firstSearched);
+    const ds     = d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+    const ts     = d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    return `<div class="hist-item" onclick="loadFromHistory('${item.id}')">
+      <div class="hist-score" style="color:${scoreC}">${score}</div>
+      <div style="flex:1;min-width:0">
+        <div class="hist-name">${item.productName || item.keyword}</div>
+        <div class="hist-date">${ds} · ${ts}</div>
+      </div>
+      <button class="hist-del" onclick="delHistory('${item.id}',event)" title="Remove">×</button>
+    </div>`;
+  }).join('');
+}
+
+function loadFromHistory(id) {
+  const item = historyCache.find(h => h.id === id);
+  if (!item) return;
+  currentKeyword = item.keyword;
+  document.getElementById('kw').value = item.keyword;
+  render(item.data);
+  showResults();
+  animateRings(item.data.amazon);
+  if (window.innerWidth < 900) toggleSidebar();
+}
+
+async function delHistory(id, e) {
+  e.stopPropagation();
+  if (!confirm('Remove this product from shared history?')) return;
+  try {
+    await db.collection('searches').doc(id).delete();
+    // onSnapshot will automatically refresh the sidebar
+  } catch (e) { console.error('Delete error:', e); }
+}
+
+// ── Rankings ───────────────────────────────────────────────────────────────
+function renderRankings() {
+  const hist = getHistory();
+  const el   = document.getElementById('sb-rank-list');
+  if (!el) return;
+  if (!hist.length) {
+    el.innerHTML = '<div class="sb-empty">No products ranked yet.<br>Search some products to build your rankings.</div>';
+    return;
+  }
+  const sorted = [...hist].sort((a, b) =>
+    (b.data?.amazon?.opportunityScore ?? 0) - (a.data?.amazon?.opportunityScore ?? 0)
+  );
+  el.innerHTML = sorted.map((item, i) => {
+    const a      = item.data?.amazon || {};
+    const score  = a.opportunityScore ?? 0;
+    const scoreC = score >= 7 ? 'var(--green)' : score >= 5 ? 'var(--yellow)' : 'var(--red)';
+    const medal  = i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : 'var(--t3)';
+    const rev    = a.estimatedMonthlyRevenue ? '$' + Number(a.estimatedMonthlyRevenue).toLocaleString() : '—';
+    const comp   = a.totalCompetitors ? a.totalCompetitors + ' sellers' : '—';
+    const rec    = a.recommendation || '—';
+    return `<div class="rank-item" onclick="loadFromHistory('${item.id}')">
+      <div class="rank-num" style="color:${medal}">#${i + 1}</div>
+      <div style="flex:1;min-width:0">
+        <div class="rank-name">${item.productName || item.keyword}</div>
+        <div class="rank-meta">${rev} · ${comp}</div>
+        <div class="rank-rec" style="color:${scoreC}">${rec}</div>
+      </div>
+      <div class="rank-score" style="color:${scoreC}">${score}/10</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Compare ────────────────────────────────────────────────────────────────
+function populateCompareSelects() {
+  const hist = getHistory();
+  const opts = '<option value="">Select product...</option>' +
+    hist.map(h => `<option value="${h.id}">${h.productName || h.keyword}</option>`).join('');
+  const selA = document.getElementById('cmpSelA');
+  const selB = document.getElementById('cmpSelB');
+  if (selA) selA.innerHTML = opts;
+  if (selB) selB.innerHTML = opts;
+  renderSavedComparisons();
+}
+
+function doCompare() {
+  const idA = document.getElementById('cmpSelA').value;
+  const idB = document.getElementById('cmpSelB').value;
+  if (!idA || !idB)    { alert('Please select two products to compare.'); return; }
+  if (idA === idB)     { alert('Please select two different products.'); return; }
+  const pA = historyCache.find(h => h.id === idA);
+  const pB = historyCache.find(h => h.id === idB);
+  if (!pA || !pB) return;
+  openComparison(pA, pB, true);
+}
+
+function openComparison(pA, pB, saveIt) {
+  if (saveIt) {
+    db.collection('comparisons').add({
+      pAId:        pA.id,
+      pBId:        pB.id,
+      pAName:      pA.productName || pA.keyword,
+      pBName:      pB.productName || pB.keyword,
+      dateCreated: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(e => console.error('Save comparison error:', e));
+    // onSnapshot will refresh the saved comparisons list automatically
+  }
+
+  const aA  = pA.data?.amazon   || {};
+  const aB  = pB.data?.amazon   || {};
+  const alA = pA.data?.alibaba  || {};
+  const alB = pB.data?.alibaba  || {};
+
+  // Metric definitions: {label, higher=true means higher value wins}
+  const metrics = [
+    { label: 'Opportunity Score', a: aA.opportunityScore,        b: aB.opportunityScore,        fmt: v => v + '/10',   higher: true  },
+    { label: 'Demand Score',      a: aA.demandScore,             b: aB.demandScore,             fmt: v => v + '/10',   higher: true  },
+    { label: 'Competition Score', a: aA.competitionScore,        b: aB.competitionScore,        fmt: v => v + '/10',   higher: true  },
+    { label: 'Profitability Score',a:aA.profitabilityScore,      b: aB.profitabilityScore,      fmt: v => v + '/10',   higher: true  },
+    { label: 'Trend Score',       a: aA.trendScore,              b: aB.trendScore,              fmt: v => v + '/10',   higher: true  },
+    { label: '─── REVENUE ───',  a: null, b: null, divider: true },
+    { label: 'Monthly Revenue',   a: aA.estimatedMonthlyRevenue, b: aB.estimatedMonthlyRevenue, fmt: v => '$' + Number(v).toLocaleString(), higher: true },
+    { label: 'Monthly Sales',     a: aA.estimatedMonthlySales,   b: aB.estimatedMonthlySales,   fmt: v => Number(v).toLocaleString() + ' units', higher: true },
+    { label: 'Avg Market Price',  a: aA.averageMarketPrice,      b: aB.averageMarketPrice,      fmt: v => '$' + Number(v).toFixed(2), higher: false },
+    { label: 'Search Volume',     a: aA.searchVolume,            b: aB.searchVolume,            fmt: v => Number(v).toLocaleString() + '/mo', higher: true },
+    { label: '─── PROFIT ───',   a: null, b: null, divider: true },
+    { label: 'Profit Per Unit',   a: aA.profitPerUnit,           b: aB.profitPerUnit,           fmt: v => '$' + Number(v).toFixed(2), higher: true },
+    { label: 'Profit Margin',     a: aA.profitMargin,            b: aB.profitMargin,            fmt: v => v + '%',     higher: true  },
+    { label: 'ROI',               a: aA.roi,                     b: aB.roi,                     fmt: v => v + '%',     higher: true  },
+    { label: 'Break-Even Price',  a: aA.breakEvenPrice,          b: aB.breakEvenPrice,          fmt: v => '$' + Number(v).toFixed(2), higher: false },
+    { label: '─── FEES ───',     a: null, b: null, divider: true },
+    { label: 'FBA Fulfilment Fee',a: aA.fbaFulfillmentFee,       b: aB.fbaFulfillmentFee,       fmt: v => '$' + Number(v).toFixed(2), higher: false },
+    { label: 'Referral Fee',      a: aA.referralFee,             b: aB.referralFee,             fmt: v => '$' + Number(v).toFixed(2), higher: false },
+    { label: 'Storage Fee',       a: aA.fbaStorageFee,           b: aB.fbaStorageFee,           fmt: v => '$' + Number(v).toFixed(2) + '/mo', higher: false },
+    { label: '─── COMPETITION ─',a: null, b: null, divider: true },
+    { label: 'Total Competitors', a: aA.totalCompetitors,        b: aB.totalCompetitors,        fmt: v => Number(v).toLocaleString(), higher: false },
+    { label: 'Avg Review Count',  a: aA.totalReviews,            b: aB.totalReviews,            fmt: v => Number(v).toLocaleString(), higher: false },
+    { label: 'Avg Star Rating',   a: aA.averageRating,           b: aB.averageRating,           fmt: v => v + ' ★',   higher: true  },
+    { label: 'BSR (approx best)', a: null,                       b: null, info: [aA.bsr || '—', aB.bsr || '—'] },
+    { label: '─── SOURCING ───', a: null, b: null, divider: true },
+    { label: 'Alibaba Unit Price',a: alA.unitPriceRangeMin,      b: alB.unitPriceRangeMin,      fmt: v => '$' + Number(v).toFixed(2) + ' USD', higher: false },
+    { label: 'Min Order Qty',     a: alA.moq,                    b: alB.moq,                    fmt: v => Number(v).toLocaleString() + ' units', higher: false },
+    { label: 'Sea Freight / unit',a: null, b: null, info: [alA.shippingMethods?.sea?.costPerUnit || '—', alB.shippingMethods?.sea?.costPerUnit || '—'] },
+    { label: 'Air Freight / unit',a: null, b: null, info: [alA.shippingMethods?.air?.costPerUnit || '—', alB.shippingMethods?.air?.costPerUnit || '—'] },
+  ];
+
+  let winsA = 0, winsB = 0;
+
+  const rows = metrics.map(m => {
+    if (m.divider) {
+      return `<tr><td colspan="3" style="padding:10px 12px 4px;font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.6px;border-bottom:1px solid var(--border2)">${m.label}</td></tr>`;
+    }
+    if (m.info) {
+      return `<tr><td class="cmp-tbl td:first-child" style="text-align:left;font-size:12px;color:var(--t2);padding:9px 12px;border-bottom:1px solid var(--border)">${m.label}</td>
+        <td class="cmp-draw" style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:center;font-size:13px">${m.info[0]}</td>
+        <td class="cmp-draw" style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:center;font-size:13px">${m.info[1]}</td></tr>`;
+    }
+    const na = (m.a !== null && m.a !== undefined) ? Number(m.a) : null;
+    const nb = (m.b !== null && m.b !== undefined) ? Number(m.b) : null;
+    let clA = 'cmp-draw', clB = 'cmp-draw';
+    if (na !== null && nb !== null && !isNaN(na) && !isNaN(nb) && na !== nb) {
+      if (m.higher ? na > nb : na < nb) { clA = 'cmp-win'; winsA++; }
+      else                               { clB = 'cmp-win'; winsB++; }
+    }
+    const fa = na !== null && !isNaN(na) ? m.fmt(na) : '—';
+    const fb = nb !== null && !isNaN(nb) ? m.fmt(nb) : '—';
+    return `<tr>
+      <td style="text-align:left;font-size:12px;color:var(--t2);padding:9px 12px;border-bottom:1px solid var(--border)">${m.label}</td>
+      <td class="${clA}" style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:center;font-size:13px">${fa}</td>
+      <td class="${clB}" style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:center;font-size:13px">${fb}</td>
+    </tr>`;
+  }).join('');
+
+  const recA = aA.recommendation || '—';
+  const recB = aB.recommendation || '—';
+  const recAc = recA.toLowerCase().includes('go') ? '#34d399' : recA.toLowerCase().includes('avoid') ? '#fca5a5' : '#fcd34d';
+  const recBc = recB.toLowerCase().includes('go') ? '#34d399' : recB.toLowerCase().includes('avoid') ? '#fca5a5' : '#fcd34d';
+
+  // Winner banner
+  const winnerBanner = winsA === winsB
+    ? `<div style="font-size:13px;color:var(--t2);font-weight:600">🤝 Tied — ${winsA} categories each</div>`
+    : winsA > winsB
+      ? `<div style="font-size:13px;font-weight:700;color:#34d399">🏆 ${pA.productName||pA.keyword} wins ${winsA} vs ${winsB} categories</div>`
+      : `<div style="font-size:13px;font-weight:700;color:var(--acc2)">🏆 ${pB.productName||pB.keyword} wins ${winsB} vs ${winsA} categories</div>`;
+
+  document.getElementById('cmpSubtitle').textContent = `${pA.productName||pA.keyword} vs ${pB.productName||pB.keyword}`;
+  document.getElementById('cmpContent').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg1);border-radius:10px;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      ${winnerBanner}
+      <div style="font-size:11px;color:var(--t3)"><span style="color:#34d399">■</span> Green cell = winner in that category</div>
+    </div>
+    <table class="cmp-tbl" style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr>
+          <th style="text-align:left;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;border-bottom:2px solid var(--border2);width:34%">Metric</th>
+          <th style="color:#34d399;padding:10px 12px;border-bottom:2px solid var(--border2);width:33%;font-size:12px">${pA.productName||pA.keyword}</th>
+          <th style="color:var(--acc2);padding:10px 12px;border-bottom:2px solid var(--border2);width:33%;font-size:12px">${pB.productName||pB.keyword}</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr>
+          <td style="text-align:left;font-size:12px;font-weight:700;color:var(--t1);padding:12px;border-top:2px solid var(--border2)">AI Recommendation</td>
+          <td style="text-align:center;font-size:13px;font-weight:700;padding:12px;color:${recAc};border-top:2px solid var(--border2)">${recA}</td>
+          <td style="text-align:center;font-size:13px;font-weight:700;padding:12px;color:${recBc};border-top:2px solid var(--border2)">${recB}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+  document.getElementById('cmpModal').classList.add('on');
+}
+
+function closeCmpModal() {
+  document.getElementById('cmpModal').classList.remove('on');
+}
+
+function renderSavedComparisons() {
+  const el = document.getElementById('sb-saved-comps');
+  if (!el) return;
+  if (!comparisonsCache.length) {
+    el.innerHTML = '<div class="sb-empty">No saved comparisons yet.</div>';
+    return;
+  }
+  el.innerHTML = comparisonsCache.map(c => {
+    const d  = new Date(c.dateCreated);
+    const ds = d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+    return `<div class="hist-item" onclick="loadSavedComparison('${c.id}')">
+      <div style="font-size:16px;flex-shrink:0">⚖️</div>
+      <div style="flex:1;min-width:0">
+        <div class="hist-name" style="font-size:11px">${c.pAName} vs ${c.pBName}</div>
+        <div class="hist-date">${ds}</div>
+      </div>
+      <button class="hist-del" onclick="delSavedComp('${c.id}',event)">×</button>
+    </div>`;
+  }).join('');
+}
+
+function loadSavedComparison(id) {
+  const comp = comparisonsCache.find(c => c.id === id);
+  if (!comp) return;
+  const pA = historyCache.find(h => h.id === comp.pAId);
+  const pB = historyCache.find(h => h.id === comp.pBId);
+  if (!pA || !pB) {
+    alert('One or both products are no longer in the shared search history.');
+    return;
+  }
+  openComparison(pA, pB, false);
+}
+
+async function delSavedComp(id, e) {
+  e.stopPropagation();
+  try {
+    await db.collection('comparisons').doc(id).delete();
+    // onSnapshot refreshes the list automatically
+  } catch (e) { console.error('Delete comparison error:', e); }
+}
+
+// ─── TRENDING ──────────────────────────────────────────────────────────────
+const RAPIDAPI_KEY = '3bb328077amshf7c77664e75656bp1782e9jsn8e99e52f5401';
+
+const TREND_CATEGORIES = [
+  { key:'home_kitchen',       label:'Home & Kitchen',          emoji:'🏠', query:'home kitchen products Amazon Australia' },
+  { key:'baby_kids',          label:'Baby & Kids',             emoji:'👶', query:'baby kids products Amazon Australia' },
+  { key:'fitness_sports',     label:'Fitness & Sports',        emoji:'🏋️', query:'fitness sports equipment Amazon Australia' },
+  { key:'pet_supplies',       label:'Pet Supplies',            emoji:'🐕', query:'pet supplies Amazon Australia' },
+  { key:'beauty_personal',    label:'Beauty & Personal Care',  emoji:'💄', query:'beauty personal care products Amazon Australia' },
+  { key:'gaming_electronics', label:'Gaming & Electronics',    emoji:'🎮', query:'gaming electronics gadgets Amazon Australia' },
+  { key:'health_wellness',    label:'Health & Wellness',       emoji:'🌿', query:'health wellness supplements Amazon Australia' },
+  { key:'kitchen_gadgets',    label:'Kitchen Gadgets',         emoji:'🍳', query:'kitchen gadgets tools Amazon Australia' },
+  { key:'cleaning_org',       label:'Cleaning & Organisation', emoji:'🧹', query:'cleaning organisation products Amazon Australia' },
+  { key:'outdoor_travel',     label:'Outdoor & Travel',        emoji:'🎒', query:'outdoor travel gear Amazon Australia' },
+];
+
+let activeTrendCat = null;
+let trendFirestoreUnsub = null;
+
+function showPage(page) {
+  // Legacy wrapper — route through mainTab
+  const btn = document.getElementById('mainTab-' + (page === 'trending' ? 'trending' : 'amazon'));
+  if (btn) mainTab(page === 'trending' ? 'trending' : 'amazon', btn);
+}
+
+function initTrendCategories() {
+  document.getElementById('catGrid').innerHTML = TREND_CATEGORIES.map(c =>
+    `<button class="cat-btn" id="cat-${c.key}" onclick="selectCategory('${c.key}')">
+       <span style="font-size:20px;flex-shrink:0">${c.emoji}</span>${c.label}
+     </button>`
+  ).join('');
+}
+
+async function selectCategory(key) {
+  if (activeTrendCat === key) return;
+  activeTrendCat = key;
+
+  TREND_CATEGORIES.forEach(c => {
+    const btn = document.getElementById(`cat-${c.key}`);
+    if (btn) btn.classList.toggle('active', c.key === key);
+  });
+
+  if (trendFirestoreUnsub) { trendFirestoreUnsub(); trendFirestoreUnsub = null; }
+  showTrendLoad();
+
+  trendFirestoreUnsub = db.collection('trending').doc(key).onSnapshot(snap => {
+    if (activeTrendCat !== key) return;
+    if (snap.exists) {
+      const d = snap.data();
+      const age = Date.now() - tsToDate(d.fetchedAt).getTime();
+      if (age < 4 * 60 * 60 * 1000) { renderTrendingResult(d); return; }
+    }
+    fetchTrendFresh(key);
+  }, err => { console.error('Trend snapshot error', err); fetchTrendFresh(key); });
+}
+
+async function fetchTrendFresh(key) {
+  const cat = TREND_CATEGORIES.find(c => c.key === key);
+  if (!cat) return;
+
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) {
+    showTrendErr('Please enter your Anthropic API key at the top to use this feature.');
+    return;
+  }
+
+  // Step 1: Google Trends API (never throws — null = use Claude-only)
+  showTrendLoad('Fetching Google Trends data…');
+  let raw = null;
+  try { raw = await fetchGoogleTrends(); } catch(e) {
+    console.warn('fetchGoogleTrends unexpected throw:', e);
+    raw = null;
+  }
+
+  if (!raw) showTrendLoad('Google Trends unavailable — generating AI-only analysis…');
+  else       showTrendLoad('Analysing trends with Claude AI…');
+
+  // Step 2: Claude analysis
+  let result = null;
+  try {
+    result = await analyseTrendsWithClaude(apiKey, cat, raw);
+  } catch(e) {
+    console.error('Claude analysis error:', e);
+    // If Claude fails with real trends data, try again without it (simpler prompt)
+    if (raw !== null) {
+      showTrendLoad('Retrying without Trends data…');
+      try { result = await analyseTrendsWithClaude(apiKey, cat, null); }
+      catch(e2) {
+        console.error('Claude retry error:', e2);
+        showTrendErr(`Analysis failed: ${e2.message || 'Unknown error'}. Please try again.`);
+        return;
+      }
+    } else {
+      showTrendErr(`Analysis failed: ${e.message || 'Unknown error'}. Please try again.`);
+      return;
+    }
+  }
+
+  // Step 3: Save to Firestore (non-fatal if it fails)
+  try { await saveTrendToFirestore(key, result, raw); }
+  catch(e) { console.error('Firestore save error:', e); }
+  // onSnapshot fires → renderTrendingResult called automatically
+}
+
+async function fetchGoogleTrends() {
+  const TRENDS_URL = 'https://google-trends-real-time-insights-api.p.rapidapi.com/general/?geo=US&order=1';
+  const TRENDS_HEADERS = {
+    'Content-Type': 'application/json',
+    'x-rapidapi-key': RAPIDAPI_KEY,
+    'x-rapidapi-host': 'google-trends-real-time-insights-api.p.rapidapi.com'
+  };
+
+  // Count this as one API usage (each fetch = one quota unit on RapidAPI free tier)
+  incrementTrendsUsage();
+
+  // Attempt 1: direct call
+  try {
+    const res = await fetch(TRENDS_URL, { method: 'GET', headers: TRENDS_HEADERS });
+    if (res.ok) {
+      try {
+        const data = await res.json();
+        console.log('Trends: direct OK');
+        return data;
+      } catch(e) { console.warn('Trends: direct response not valid JSON:', e.message); }
+    } else { console.warn('Trends: direct status', res.status); }
+  } catch(e) { console.warn('Trends: direct failed (likely CORS):', e.message); }
+
+  // Attempt 2: CORS proxy
+  try {
+    const proxied = 'https://corsproxy.io/?' + encodeURIComponent(TRENDS_URL);
+    const res = await fetch(proxied, { method: 'GET', headers: TRENDS_HEADERS });
+    if (res.ok) {
+      try {
+        const data = await res.json();
+        console.log('Trends: proxy OK');
+        return data;
+      } catch(e) { console.warn('Trends: proxy response not valid JSON:', e.message); }
+    } else { console.warn('Trends: proxy status', res.status); }
+  } catch(e) { console.warn('Trends: proxy failed:', e.message); }
+
+  // Both attempts failed — return null to trigger Claude-only fallback
+  return null;
+}
+
+function parseTrendTopics(raw) {
+  const topics = [];
+  try {
+    const arr = raw?.trending_searches || raw?.trendingSearches || raw?.items
+      || raw?.stories || raw?.results || (Array.isArray(raw) ? raw : Object.values(raw || {}));
+    const list = Array.isArray(arr) ? arr : [];
+    list.slice(0, 15).forEach((item, i) => {
+      const title = item?.title?.query || item?.title || item?.query || item?.name || `Trend ${i+1}`;
+      const traffic = item?.formattedTraffic || item?.traffic || item?.search_volume || '';
+      topics.push({ title: String(title).trim(), traffic: String(traffic), rank: i + 1 });
+    });
+  } catch(e) { /* return whatever collected */ }
+  return topics.length ? topics : [{ title: 'General trending searches', traffic: '', rank: 1 }];
+}
+
+// Attempt to close unclosed brackets in a truncated JSON string
+function repairTruncatedJSON(str) {
+  // Remove any trailing partial token (cut before the last complete value)
+  str = str.replace(/,\s*$/, '');
+  // Walk the string tracking open brackets/strings so we can close them
+  const stack = [];
+  let inStr = false, esc = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (esc)            { esc = false; continue; }
+    if (c === '\\' && inStr) { esc = true; continue; }
+    if (c === '"')      { inStr = !inStr; continue; }
+    if (inStr)          continue;
+    if (c === '{')      stack.push('}');
+    else if (c === '[') stack.push(']');
+    else if (c === '}' || c === ']') stack.pop();
+  }
+  return str + stack.reverse().join('');
+}
+
+// Extract and parse JSON from a Claude text response robustly
+function extractJSON(text) {
+  let txt = text.trim();
+  // Strip markdown code fences (``` or ```json)
+  const fenced = txt.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenced) txt = fenced[1].trim();
+  // Find outermost { … }
+  const first = txt.indexOf('{');
+  const last  = txt.lastIndexOf('}');
+  if (first !== -1 && last !== -1 && last > first) txt = txt.slice(first, last + 1);
+
+  // Attempt 1: parse as-is
+  try { return JSON.parse(txt); } catch(e1) {
+    console.warn('JSON parse attempt 1 failed:', e1.message, '— trying repair…');
+  }
+  // Attempt 2: repair truncated brackets then parse
+  try { return JSON.parse(repairTruncatedJSON(txt)); } catch(e2) {
+    console.warn('JSON parse attempt 2 (repaired) failed:', e2.message);
+    throw new Error(`Could not parse AI response as JSON: ${e2.message}`);
+  }
+}
+
+async function analyseTrendsWithClaude(apiKey, cat, rawTrends) {
+  const hasTrends = rawTrends != null;
+  let topics = [];
+  try { topics = hasTrends ? parseTrendTopics(rawTrends) : []; }
+  catch(e) { console.warn('parseTrendTopics error:', e); topics = []; }
+  const hasRealTopics = topics.length > 0 && topics[0].title !== 'General trending searches';
+
+  let contextBlock;
+  if (hasTrends && hasRealTopics) {
+    const topicsText = topics.slice(0, 10)
+      .map(t => `${t.rank}. ${t.title}${t.traffic ? ' (' + t.traffic + ')' : ''}`)
+      .join('\n');
+    contextBlock = `Real Google Trends data for "${cat.emoji} ${cat.label}" (last 24h, US/AU):\n${topicsText}\n\nAnalyse for FBA opportunity on Amazon Australia.`;
+  } else {
+    contextBlock = `Google Trends unavailable. Using expert knowledge, list 6 high-opportunity products in "${cat.emoji} ${cat.label}" trending right now (${new Date().toLocaleDateString('en-AU', {month:'long',year:'numeric'})}).`;
+  }
+
+  const prompt = `You are an expert Amazon FBA product researcher specialising in the Australian market.
+
+${contextBlock}
+
+IMPORTANT: Reply with ONLY a single valid JSON object. No markdown fences, no extra text before or after the JSON. Keep all string values short and concise to stay within the response size limit. Return exactly 6 products.
+
+{
+  "categoryName": "${cat.label}",
+  "dataSource": "${hasTrends && hasRealTopics ? 'Google Trends' : 'Claude AI Market Analysis'}",
+  "overallSummary": "2-3 sentence market overview for FBA sellers.",
+  "products": [
+    {
+      "rank": 1,
+      "name": "Product name",
+      "heatScore": 85,
+      "estimatedMarginPct": "25-40%",
+      "whyTrending": "One concise sentence.",
+      "fbaInsight": "Two concise sentences on FBA viability.",
+      "suggestedKeywords": ["keyword1", "keyword2", "keyword3"],
+      "amazonUS": { "trendGrowthPct": "+45%", "estimatedMonthlyRevenueAUD": 95000, "competitionLevel": "High", "fbaOpportunityScore": 65, "avgSellingPriceAUD": 57.35 },
+      "amazonAU": { "trendGrowthPct": "+38%", "estimatedMonthlyRevenueAUD": 18000, "competitionLevel": "Medium-Low", "fbaOpportunityScore": 78, "avgSellingPriceAUD": 44.99 },
+      "recommendation": "Start with AU",
+      "investmentEstimateAUD": { "minimum": 3500, "recommended": 9000, "ideal": 19000, "paybackMonths": "3-5" }
+    }
+  ]
+}
+
+Rules: heatScore 0-100. fbaOpportunityScore 0-100. recommendation must be one of: Strong Buy AU / Strong Buy US / Both Markets / Consider AU / Consider US / Monitor / Skip. All monetary values in AUD (1 USD = 1.55 AUD). Be concise — short strings only.`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 6000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error?.message || `Claude API error ${res.status}`);
+  }
+
+  let body;
+  try { body = await res.json(); }
+  catch(e) { throw new Error('Failed to read Claude API response.'); }
+
+  // Track token usage
+  addTokenUsage(body.usage?.input_tokens, body.usage?.output_tokens);
+
+  const rawText = (body.content?.[0]?.text || '').trim();
+  if (!rawText) throw new Error('Claude returned an empty response.');
+
+  return extractJSON(rawText);
+}
+
+async function saveTrendToFirestore(key, result, rawTrends) {
+  try {
+    await db.collection('trending').doc(key).set({
+      ...result,
+      rawTopics: parseTrendTopics(rawTrends),
+      fetchedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) { console.error('Trend Firestore write error:', e); }
+}
+
+function showTrendLoad(msg) {
+  document.getElementById('trendContent').innerHTML = `
+    <div class="trend-load">
+      <div class="t-spin"></div>
+      <p>${msg || 'Fetching real-time trends &amp; analysing with Claude AI…'}</p>
+    </div>`;
+}
+
+function showTrendErr(msg) {
+  document.getElementById('trendContent').innerHTML = `<div class="trend-err">⚠️ ${msg}</div>`;
+}
+
+function renderTrendingResult(d) {
+  if (!d || !d.products) { showTrendErr('No data available. Try refreshing.'); return; }
+
+  const age = d.fetchedAt ? tsToDate(d.fetchedAt) : null;
+  const ageStr = age
+    ? age.toLocaleString('en-AU', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+    : 'Unknown';
+
+  const recColor = r => ({ 'Strong Buy':'var(--green)', 'Consider':'var(--acc2)', 'Monitor':'var(--yellow)', 'Skip':'var(--red)' }[r] || 'var(--t3)');
+
+  const catObj = TREND_CATEGORIES.find(c => c.key === activeTrendCat) || {};
+
+  const oppCol = v => v >= 70 ? 'var(--green)' : v >= 45 ? 'var(--yellow)' : 'var(--red)';
+  const audFmt = v => v ? '$' + Number(v).toLocaleString('en-AU', {maximumFractionDigits:0}) + ' AUD' : '—';
+
+  const cards = (d.products || []).map((p, i) => {
+    const heat = Math.min(100, Math.max(0, p.heatScore || 50));
+    const usD  = p.amazonUS  || {};
+    const auD  = p.amazonAU  || {};
+    const usOpp = Math.min(100, Math.max(0, usD.fbaOpportunityScore || p.fbaOpportunityScore || 50));
+    const auOpp = Math.min(100, Math.max(0, auD.fbaOpportunityScore || p.fbaOpportunityScore || 50));
+    const kws   = (p.suggestedKeywords || []).map(k => `<span class="trend-tag">${k}</span>`).join('');
+    return `
+    <div class="trend-card" style="animation-delay:${i * 0.06}s">
+      <div class="trend-card-rank">Rank <span>#${p.rank || i + 1}</span></div>
+      <div class="trend-card-title">${p.name || '—'}</div>
+      <div class="trend-card-heat">
+        🔥 Overall Heat: ${heat}/100
+        <div class="heat-bar"><div class="heat-fill" style="width:${heat}%"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--acc2);margin-bottom:6px">🇺🇸 AMAZON US</div>
+          <div class="tmeta-item" style="background:transparent;padding:0;margin-bottom:4px">
+            <div class="tmeta-label">FBA Score</div>
+            <div class="tmeta-val" style="color:${oppCol(usOpp)}">${usOpp}/100</div>
+          </div>
+          <div class="tmeta-item" style="background:transparent;padding:0;margin-bottom:4px">
+            <div class="tmeta-label">Competition</div>
+            <div class="tmeta-val">${usD.competitionLevel || '—'}</div>
+          </div>
+          <div class="tmeta-item" style="background:transparent;padding:0;margin-bottom:4px">
+            <div class="tmeta-label">Monthly Revenue</div>
+            <div class="tmeta-val" style="font-size:11px">${audFmt(usD.estimatedMonthlyRevenueAUD)}</div>
+          </div>
+          <div class="tmeta-item" style="background:transparent;padding:0">
+            <div class="tmeta-label">Avg Price (AUD)</div>
+            <div class="tmeta-val">${usD.avgSellingPriceAUD ? '$'+Number(usD.avgSellingPriceAUD).toFixed(2) : '—'}</div>
+          </div>
+          ${usD.trendGrowthPct ? `<div style="font-size:10px;color:var(--green);font-weight:600;margin-top:4px">↑ ${usD.trendGrowthPct} growth</div>` : ''}
+        </div>
+        <div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px">
+          <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">🇦🇺 AMAZON AU</div>
+          <div class="tmeta-item" style="background:transparent;padding:0;margin-bottom:4px">
+            <div class="tmeta-label">FBA Score</div>
+            <div class="tmeta-val" style="color:${oppCol(auOpp)}">${auOpp}/100</div>
+          </div>
+          <div class="tmeta-item" style="background:transparent;padding:0;margin-bottom:4px">
+            <div class="tmeta-label">Competition</div>
+            <div class="tmeta-val">${auD.competitionLevel || '—'}</div>
+          </div>
+          <div class="tmeta-item" style="background:transparent;padding:0;margin-bottom:4px">
+            <div class="tmeta-label">Monthly Revenue</div>
+            <div class="tmeta-val" style="font-size:11px">${audFmt(auD.estimatedMonthlyRevenueAUD)}</div>
+          </div>
+          <div class="tmeta-item" style="background:transparent;padding:0">
+            <div class="tmeta-label">Avg Price (AUD)</div>
+            <div class="tmeta-val">${auD.avgSellingPriceAUD ? '$'+Number(auD.avgSellingPriceAUD).toFixed(2) : '—'}</div>
+          </div>
+          ${auD.trendGrowthPct ? `<div style="font-size:10px;color:var(--green);font-weight:600;margin-top:4px">↑ ${auD.trendGrowthPct} growth</div>` : ''}
+        </div>
+      </div>
+      <div class="trend-card-insight">
+        <strong style="color:var(--t1)">Why trending:</strong> ${p.whyTrending || '—'}<br>
+        <strong style="color:var(--t1);display:inline-block;margin-top:6px">FBA insight:</strong> ${p.fbaInsight || '—'}
+      </div>
+      ${kws ? `<div class="trend-tags">${kws}</div>` : ''}
+      ${(() => {
+        const ie = p.investmentEstimateAUD || {};
+        if (!ie.minimum && !ie.recommended) return '';
+        const fmtK = v => v ? '$' + Number(v).toLocaleString('en-AU', {maximumFractionDigits:0}) : '—';
+        return `<div class="inv-trend-mini">
+          <div class="inv-trend-hdr">💰 Investment Estimate (AUD)</div>
+          <div class="inv-trend-row"><span class="inv-trend-lbl">⚠️ Minimum budget</span><span class="inv-trend-val" style="color:#fca5a5">${fmtK(ie.minimum)}</span></div>
+          <div class="inv-trend-row"><span class="inv-trend-lbl">✅ Recommended budget</span><span class="inv-trend-val" style="color:#34d399">${fmtK(ie.recommended)}</span></div>
+          <div class="inv-trend-row"><span class="inv-trend-lbl">🚀 Ideal budget</span><span class="inv-trend-val" style="color:var(--acc2)">${fmtK(ie.ideal)}</span></div>
+          ${ie.paybackMonths ? `<div class="inv-trend-row" style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(245,158,11,.15)"><span class="inv-trend-lbl">Est. payback period</span><span class="inv-trend-val" style="color:var(--yellow)">${ie.paybackMonths}</span></div>` : ''}
+        </div>`;
+      })()}
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:var(--t3)">Est. margin: ${p.estimatedMarginPct || p.estimatedMargin || '—'}</span>
+        <span style="font-size:12px;font-weight:700;color:${recColor(p.recommendation)}">${p.recommendation || '—'}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('trendContent').innerHTML = `
+    <div class="trend-controls">
+      <span class="trend-updated">Last updated: ${ageStr}</span>
+      <button class="trend-refresh-btn" onclick="if(activeTrendCat){if(trendFirestoreUnsub){trendFirestoreUnsub();trendFirestoreUnsub=null;}showTrendLoad();fetchTrendFresh(activeTrendCat);}">↻ Refresh Data</button>
+    </div>
+    <div class="trend-ai-box">
+      <h3>🤖 Claude's Market Overview — ${catObj.emoji || ''} ${d.categoryName || ''}</h3>
+      ${d.dataSource && d.dataSource !== 'Google Trends'
+        ? `<div style="font-size:11px;color:var(--yellow);margin-bottom:10px;display:flex;align-items:center;gap:5px">⚠️ Google Trends unavailable — analysis generated by Claude AI from market knowledge</div>`
+        : `<div style="font-size:11px;color:var(--green);margin-bottom:10px;display:flex;align-items:center;gap:5px">✓ Powered by live Google Trends data</div>`}
+      <div class="trend-ai-summary">${d.overallSummary || '—'}</div>
+    </div>
+    <div class="trend-cards">${cards || '<div class="trend-empty">No products found.</div>'}</div>`;
+}
+
+// ─── Usage Tracking ────────────────────────────────────────────────────────
+const TRENDS_USAGE_KEY = 'fba_trends_usage_v1';
+
+function _currentMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function getTrendsUsage() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(TRENDS_USAGE_KEY) || '{}');
+    if (raw.month !== _currentMonth()) return { count: 0, month: _currentMonth() };
+    return { count: raw.count || 0, month: raw.month };
+  } catch { return { count: 0, month: _currentMonth() }; }
+}
+
+function incrementTrendsUsage() {
+  const obj = getTrendsUsage();
+  obj.count = (obj.count || 0) + 1;
+  try { localStorage.setItem(TRENDS_USAGE_KEY, JSON.stringify(obj)); } catch {}
+  updateUsageBar();
+}
+
+// Session token accumulator (reset when page reloads — no persistence needed)
+let _sessionTokens = { input: 0, output: 0 };
+
+function addTokenUsage(inputT, outputT) {
+  _sessionTokens.input  += (Number(inputT)  || 0);
+  _sessionTokens.output += (Number(outputT) || 0);
+  updateUsageBar();
+}
+
+function _tokenCostAUD(inp, out) {
+  // claude-sonnet-4-5: $3/MTok input, $15/MTok output → convert USD→AUD @1.55
+  return ((inp / 1e6 * 3.0) + (out / 1e6 * 15.0)) * 1.55;
+}
+
+function updateUsageBar() {
+  const usage = getTrendsUsage();
+  const count = usage.count || 0;
+  const pct   = Math.min(100, count);
+  const col   = pct <= 60 ? 'var(--green)' : pct <= 85 ? 'var(--yellow)' : 'var(--red)';
+
+  const fill = document.getElementById('tub-trends-fill');
+  const cnt  = document.getElementById('tub-trends-count');
+  const warn = document.getElementById('tub-trends-warn');
+  if (fill) { fill.style.width = pct + '%'; fill.style.backgroundColor = col; }
+  if (cnt)  cnt.textContent = `${count} / 100 requests used this month`;
+  if (warn) { warn.classList.toggle('on', count >= 100); warn.style.color = col; }
+
+  const tot   = _sessionTokens.input + _sessionTokens.output;
+  const cost  = _tokenCostAUD(_sessionTokens.input, _sessionTokens.output);
+  const tokEl = document.getElementById('tub-token-count');
+  if (tokEl) {
+    tokEl.textContent = tot > 0
+      ? `~${tot.toLocaleString('en-AU')} tokens (~$${cost.toFixed(3)} AUD)`
+      : '~0 tokens (~$0.000 AUD)';
+  }
+}
+
+// ─── API key persistence ───────────────────────────────────────────────────
+const API_KEY_STORAGE = 'fba_scout_api_key';
+const apiInput = document.getElementById('apiKey');
+
+// Load saved key on startup
+const savedKey = localStorage.getItem(API_KEY_STORAGE);
+if (savedKey) {
+  apiInput.value = savedKey;
+  apiInput.style.borderColor = 'var(--green)';
+}
+
+// Save key whenever it changes
+apiInput.addEventListener('input', () => {
+  const val = apiInput.value.trim();
+  if (val) {
+    localStorage.setItem(API_KEY_STORAGE, val);
+    apiInput.style.borderColor = 'var(--green)';
+  } else {
+    localStorage.removeItem(API_KEY_STORAGE);
+    apiInput.style.borderColor = '';
+  }
+});
+
+// Enter key on search
+document.getElementById('kw').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+</script>
+</body>
+</html>
